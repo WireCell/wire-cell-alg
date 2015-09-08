@@ -8,6 +8,17 @@ namespace WireCell {
 
     /** A predicate returning true when a cell is associated with some
      * number of wires above some threshold.
+     *
+     * Use something like:
+     * 
+     * ```c++
+     * ChannelCharge cc = my_channel_slice->charge();
+     * MaybeHitCell strong_selector(cc, 10.0, 3);
+     * ICellVector strong_cells, all_cells = ...;
+     * std::copy_if(all_cells.begin(), all_cells.end(),
+     *              std::back_inserter(strong_cells), 
+     *              strong_selector);
+     * ```
      */
     struct MaybeHitCell {
 	const WireCell::ChannelCharge& cc;
@@ -26,3 +37,6 @@ namespace WireCell {
 }
 
 #endif
+
+
+// fixme: this file is a badly named.
