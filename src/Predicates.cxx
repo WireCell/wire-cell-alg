@@ -27,9 +27,13 @@ bool MaybeHitCell::operator()(const WireCell::ICell::pointer& cell) const
 	    continue;
 	}
 	if (hit->second < qmin) {
-	    //cerr << "\tskipping wire with low charge " << hit->second << " < " << qmin << endl;
+	    //cerr << "\tskipping wire with channel #" << ch
+	    //     << " low charge " << hit->second << " < " << qmin << endl;
 	    continue;
 	}
+	cerr << "MaybeHitCell: cell id: " << cell->ident()
+	     << " accepting wire with channel #" << ch 
+	     << " charge " << hit->second << " >= " << qmin << endl;
 	++count;
     }
     return count >= nmin;	    
