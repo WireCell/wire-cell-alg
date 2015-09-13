@@ -84,93 +84,95 @@ int main()
 	drifters[ind]->flush();
     }
 
+    AssertMsg(false, "Finish this test");
+
     // diffuse + collect/induce
 
-    std::vector<PlaneDuctor*> ductors = {
-	new PlaneDuctor(WirePlaneId(kUlayer), iwp->pitchU(), tick, now),
-	new PlaneDuctor(WirePlaneId(kVlayer), iwp->pitchV(), tick, now),
-	new PlaneDuctor(WirePlaneId(kWlayer), iwp->pitchW(), tick, now)
-    };
-    while (true) {
-	int n_ok = 0;
-	for (int ind=0; ind < 3; ++ind) {
-	    IDepo::pointer depo;
-	    if (!drifters[ind]->extract(depo)) {
-		continue;
-	    }
-	    Assert(depo);
-	    Assert(ductors[ind]->insert(depo));
-	    ++n_ok;
-	}
-	if (n_ok == 0) {
-	    break;
-	}
-	Assert(n_ok == 3);
-    }
-    for (int ind=0; ind < 3; ++ind) {
-	ductors[ind]->flush();
-    }
+    // std::vector<PlaneDuctor*> ductors = {
+    // 	new PlaneDuctor(WirePlaneId(kUlayer), iwp->pitchU(), tick, now),
+    // 	new PlaneDuctor(WirePlaneId(kVlayer), iwp->pitchV(), tick, now),
+    // 	new PlaneDuctor(WirePlaneId(kWlayer), iwp->pitchW(), tick, now)
+    // };
+    // while (true) {
+    // 	int n_ok = 0;
+    // 	for (int ind=0; ind < 3; ++ind) {
+    // 	    IDepo::pointer depo;
+    // 	    if (!drifters[ind]->extract(depo)) {
+    // 		continue;
+    // 	    }
+    // 	    Assert(depo);
+    // 	    Assert(ductors[ind]->insert(depo));
+    // 	    ++n_ok;
+    // 	}
+    // 	if (n_ok == 0) {
+    // 	    break;
+    // 	}
+    // 	Assert(n_ok == 3);
+    // }
+    // for (int ind=0; ind < 3; ++ind) {
+    // 	ductors[ind]->flush();
+    // }
 
-    Digitizer digitizer;
-    digitizer.set_wires(wires);
+    // Digitizer digitizer;
+    // digitizer.set_wires(wires);
 
-    while (true) {
-	IPlaneSliceVector psv(3);
-	int n_ok = 0;
-	int n_eos = 0;
-	for (int ind=0; ind<3; ++ind) {
-	    if (!ductors[ind]->extract(psv[ind])) {
-		cerr << "ductor #"<<ind<<"failed"<<endl;
-		continue;
-	    }
-	    ++n_ok;
-	    if (psv[ind] == ductors[ind]->eos()) {
-		++n_eos;
-	    }
-	}
-	if (n_ok == 0) {
-	    cerr << "Got no channel slices from plane ductors" << endl;
-	    break;
-	}
-	Assert(n_ok == 3);
+    // while (true) {
+    // 	IPlaneSliceVector psv(3);
+    // 	int n_ok = 0;
+    // 	int n_eos = 0;
+    // 	for (int ind=0; ind<3; ++ind) {
+    // 	    if (!ductors[ind]->extract(psv[ind])) {
+    // 		cerr << "ductor #"<<ind<<"failed"<<endl;
+    // 		continue;
+    // 	    }
+    // 	    ++n_ok;
+    // 	    if (psv[ind] == ductors[ind]->eos()) {
+    // 		++n_eos;
+    // 	    }
+    // 	}
+    // 	if (n_ok == 0) {
+    // 	    cerr << "Got no channel slices from plane ductors" << endl;
+    // 	    break;
+    // 	}
+    // 	Assert(n_ok == 3);
 
-	Assert(n_eos == 0 || n_eos == 3);
-	if (n_eos == 3) {
-	    cerr << "Got three EOS from plane ductors" << endl;
-	    break;
-	}
+    // 	Assert(n_eos == 0 || n_eos == 3);
+    // 	if (n_eos == 3) {
+    // 	    cerr << "Got three EOS from plane ductors" << endl;
+    // 	    break;
+    // 	}
 
-	Assert(digitizer.insert(psv));
-    }
+    // 	Assert(digitizer.insert(psv));
+    // }
     
-    digitizer.flush();
+    // digitizer.flush();
 
-    ChannelCellSelector ccsel(0.0, 3);
-    ccsel.set_cells(cells);
+    // ChannelCellSelector ccsel(0.0, 3);
+    // ccsel.set_cells(cells);
 
-    while (true) {
-	IChannelSlice::pointer csp;
-	Assert(digitizer.extract(csp));
-	if (csp == digitizer.eos()) {
-	    cerr << "Digitizer reaches EOS" << endl;
-	    break;
-	}
-	Assert(ccsel.insert(csp));
-    }
+    // while (true) {
+    // 	IChannelSlice::pointer csp;
+    // 	Assert(digitizer.extract(csp));
+    // 	if (csp == digitizer.eos()) {
+    // 	    cerr << "Digitizer reaches EOS" << endl;
+    // 	    break;
+    // 	}
+    // 	Assert(ccsel.insert(csp));
+    // }
 
-    ccsel.flush();
+    // ccsel.flush();
 
-    while (true) {
-	ICellSlice::pointer cellslice;
-	Assert(ccsel.extract(cellslice));
-	if (cellslice == ccsel.eos()) {
-	    cerr << "ChannelCellSelector reaches EOS" << endl;
-	    break;
-	}
-	ICellVector cellsel = cellslice->cells();
+    // while (true) {
+    // 	ICellSlice::pointer cellslice;
+    // 	Assert(ccsel.extract(cellslice));
+    // 	if (cellslice == ccsel.eos()) {
+    // 	    cerr << "ChannelCellSelector reaches EOS" << endl;
+    // 	    break;
+    // 	}
+    // 	ICellVector cellsel = cellslice->cells();
 
-	cerr << cellsel.size() << " cells at t=" << cellslice->time() << endl;
-    }
+    // 	cerr << cellsel.size() << " cells at t=" << cellslice->time() << endl;
+    // }
 
     return 0;
 }
