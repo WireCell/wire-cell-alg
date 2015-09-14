@@ -3,6 +3,7 @@
 #include "WireCellGen/BoundCells.h"
 #include "WireCellGen/PlaneDuctor.h"
 #include "WireCellGen/Drifter.h"
+#include "WireCellGen/Diffuser.h"
 #include "WireCellGen/Digitizer.h"
 #include "WireCellGen/TrackDepos.h"
 #include "WireCellGen/WireParams.h"
@@ -84,13 +85,14 @@ int main()
 	drifters[ind]->flush();
     }
 
-    // diffuse + collect/induce
+    // diffuse 
 
-    std::vector<PlaneDuctor*> ductors = {
-	new PlaneDuctor(WirePlaneId(kUlayer), iwp->pitchU(), tick, now),
-	new PlaneDuctor(WirePlaneId(kVlayer), iwp->pitchV(), tick, now),
-	new PlaneDuctor(WirePlaneId(kWlayer), iwp->pitchW(), tick, now)
+    std::vector<Diffuser*> diffusers = {
+	new Diffuser(iwp->pitchU(), tick, now),
+	new Diffuser(iwp->pitchV(), tick, now),
+	new Diffuser(iwp->pitchW(), tick, now)
     };
+
     while (true) {
 	int n_ok = 0;
 	for (int ind=0; ind < 3; ++ind) {
@@ -99,13 +101,48 @@ int main()
 		continue;
 	    }
 	    Assert(depo);
-	    Assert(ductors[ind]->insert(depo));
+	    Assert(diffusers[ind]->insert(depo));
 	    ++n_ok;
 	}
 	if (n_ok == 0) {
 	    break;
 	}
 	Assert(n_ok == 3);
+    }
+    for (int ind=0; ind < 3; ++ind) {
+	diffusers[ind]->flush();
+    }
+
+    // collect/induce
+
+    std::vector<PlaneDuctor*> ductors = {
+	new PlaneDuctor(WirePlaneId(kUlayer), tick, ray_length(iwp->pitchU()), tick, now),
+	new PlaneDuctor(WirePlaneId(kVlayer), tick, ray_length(iwp->pitchV()), tick, now),
+	new PlaneDuctor(WirePlaneId(kWlayer), tick, ray_length(iwp->pitchW()), tick, now)
+    };
+    while (true) {
+	int n_ok = 0;
+	int n_eos = 0;
+	for (int ind=0; ind < 3; ++ind) {
+	  IDiffusion::pointer diff;
+	    if (!diffusers[ind]->extract(diff)) {
+		cerr << "Diffuser #"<<ind<<" failed" << endl;
+		continue;
+	    }
+	    ++n_ok;
+	    if (!diff) {
+		cerr << "Diffuser #"<<ind<<" hits EOS" << endl;
+		++n_eos;
+		continue;
+	    }
+	    Assert(ductors[ind]->insert(diff));
+	}
+	Assert(n_ok == 3);
+	Assert(n_eos == 0 || n_eos == 3);
+	if (n_eos == 3) {
+	    cerr << "Got three EOS from diffusers" << endl;
+	    break;
+	}
     }
     for (int ind=0; ind < 3; ++ind) {
 	ductors[ind]->flush();
@@ -120,7 +157,7 @@ int main()
 	int n_eos = 0;
 	for (int ind=0; ind<3; ++ind) {
 	    if (!ductors[ind]->extract(psv[ind])) {
-		cerr << "ductor #"<<ind<<"failed"<<endl;
+		cerr << "ductor #"<<ind<<" failed"<<endl;
 		continue;
 	    }
 	    ++n_ok;
