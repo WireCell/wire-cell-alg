@@ -170,44 +170,6 @@ int main()
 	    break;
 	}
 	Assert(n_ok == 3);
-
-	Assert(n_eos == 0 || n_eos == 3);
-	if (n_eos == 3) {
-	    cerr << "Got three EOS from plane ductors" << endl;
-	    break;
-	}
-
-	Assert(digitizer.insert(psv));
     }
-    
-    digitizer.flush();
-
-    ChannelCellSelector ccsel(0.0, 3);
-    ccsel.set_cells(cells);
-
-    while (true) {
-	IChannelSlice::pointer csp;
-	Assert(digitizer.extract(csp));
-	if (csp == digitizer.eos()) {
-	    cerr << "Digitizer reaches EOS" << endl;
-	    break;
-	}
-	Assert(ccsel.insert(csp));
-    }
-
-    ccsel.flush();
-
-    while (true) {
-	ICellSlice::pointer cellslice;
-	Assert(ccsel.extract(cellslice));
-	if (cellslice == ccsel.eos()) {
-	    cerr << "ChannelCellSelector reaches EOS" << endl;
-	    break;
-	}
-	ICellVector cellsel = cellslice->cells();
-
-	cerr << cellsel.size() << " cells at t=" << cellslice->time() << endl;
-    }
-
     return 0;
 }
