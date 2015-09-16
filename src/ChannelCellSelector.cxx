@@ -37,13 +37,11 @@ void ChannelCellSelector::flush()
 bool ChannelCellSelector::insert(const input_type& in)
 {
     if (m_all_cells.empty()) {
-	cerr << "ChannelCellSelector: no cells" << endl;
 	return false;
     }
 
     ChannelCharge cc = in->charge(); // fixme: copy?
     if (cc.empty()) {
-	//cerr << "ChannelCellSelector: no channel charge" << endl;
 	return true;
     }
 
@@ -51,12 +49,10 @@ bool ChannelCellSelector::insert(const input_type& in)
     ICellVector cells;
     std::copy_if(m_all_cells.begin(), m_all_cells.end(), back_inserter(cells), mhc);
     if (cells.empty()) {
-	cerr << "ChannelCellSelector: no cells found out of " << m_all_cells.size() << " from " << cc.size() << " charges" << endl;
+	cerr << "ChannelCellSelector: no cells found at t=" << in->time() << endl;
 	return true;
     }
 
-    cerr << "ChannelCellSelector: found " << cells.size() << " cells at t="
-	 << in->time() << endl;
     m_output.push_back(ICellSlice::pointer(new SimpleCellSlice(in->time(), cells)));
 
     return true;

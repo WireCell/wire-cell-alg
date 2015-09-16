@@ -27,15 +27,31 @@ bool MaybeHitCell::operator()(const WireCell::ICell::pointer& cell) const
 	    continue;
 	}
 	if (hit->second < qmin) {
-	    //cerr << "\tskipping wire with channel #" << ch
-	    //     << " low charge " << hit->second << " < " << qmin << endl;
+	    cerr << "\tskipping wire with channel #" << ch
+	        << " low charge " << hit->second << " < " << qmin << endl;
 	    continue;
 	}
-	cerr << "MaybeHitCell: cell id: " << cell->ident()
-	     << " accepting wire with channel #" << ch 
-	     << " charge " << hit->second << " >= " << qmin << endl;
+	// cerr << "MaybeHitCell: cell id: " << cell->ident()
+	//      << " accepting wire with channel #" << ch 
+	//      << " charge " << hit->second << " >= " << qmin << endl;
 	++count;
     }
-    return count >= nmin;	    
+
+
+    if (count > 1) {
+	cerr << "MaybeHitCell: cell id: " << cell->ident() << " with wires:";
+	for (auto wire : cell->wires()) {
+	    const int ch = wire->channel();
+	    auto hit = cc.find(ch);
+	    Quantity q = 0;
+	    if (hit == cc.end()) {
+		q = hit->second;
+	    }
+	    cerr << " #" << ch << "/q=" << q;
+	}
+	cerr << endl;
+    }
+
+    return count >= nmin;
 }
 

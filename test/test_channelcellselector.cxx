@@ -1,54 +1,38 @@
 #include "WireCellAlg/ChannelCellSelector.h"
 
 #include "WireCellGen/BoundCells.h"
-#include "WireCellGen/PlaneDuctor.h"
-#include "WireCellGen/Drifter.h"
-#include "WireCellGen/Diffuser.h"
-#include "WireCellGen/Digitizer.h"
-#include "WireCellGen/TrackDepos.h"
 #include "WireCellGen/WireParams.h"
 #include "WireCellGen/WireGenerator.h"
-#include "WireCellGen/Framer.h"
+
+#include "WireCellRootVis/Converters.h"
 
 #include "WireCellIface/WirePlaneId.h"
+#include "WireCellIface/SimpleChannelSlice.h"
 
 #include "WireCellUtil/Point.h"
-#include "WireCellUtil/Faninout.h"
 #include "WireCellUtil/Testing.h"
 
+#include "WireCellRootVis/CanvasApp.h"
+#include "WireCellRootVis/Drawers.h"
+
 #include <iostream>
-#include <boost/signals2.hpp>
-#include <typeinfo>
-#include <vector>
 
 using namespace WireCell;
 using namespace std;
 
-TrackDepos make_tracks() {
-    TrackDepos td;
-
-    const double cm = units::cm;
-    Ray same_point(Point(cm,-cm,cm), Point(cm,+cm,+cm));
-
-    const double usec = units::microsecond;
-
-    td.add_track(1*usec, same_point);
-    td.add_track(10*usec, same_point);
-    td.add_track(100*usec, same_point);
-    td.add_track(1000*usec, same_point);
-    td.add_track(10000*usec, same_point);
-
-    return td;
-}
-
-
-int main()
+int main(int argc, char *argv[])
 {
+    WireCellRootVis::CanvasApp app(argv[0], argc>1, 1000,1000);
+    app.divide(2,2);
+
     const double tick = 2.0*units::microsecond; 
     const int nticks_per_frame = 100;
     double now = 0.0*units::microsecond;
 
     IWireParameters::pointer iwp(new WireParams);
+
+
+    WireCellRootVis::draw2d(app.pad(), iwp);
 
     WireGenerator wg;
     Assert(wg.insert(iwp));
@@ -56,120 +40,49 @@ int main()
     IWireVector wires;
     Assert(wg.extract(wires));
     Assert(wires.size());
+    WireCellRootVis::draw2d(app.pad(), wires);
 
     BoundCells bc;
     bc.insert(wires);
     ICellVector cells;
     bc.extract(cells);
 
-    TrackDepos td = make_tracks();
+    cerr << "Make " << cells.size() << " cells" << endl;
+    WireCellRootVis::draw2d(app.pad(), cells);
 
-    // drift
+    ChannelCellSelector ccsel(0.0, 3);
+    ccsel.set_cells(cells);
 
-    std::vector<WireCell::Drifter*> drifters = {
-	new Drifter(iwp->pitchU().first.x()),
-	new Drifter(iwp->pitchV().first.x()),
-	new Drifter(iwp->pitchW().first.x())
-    };
+    
+    // get this numbers by running test_depodriftcell
+    double cstime0 = 62000;
+    ChannelCharge cc0;
+    cc0[100000] = Quantity(0.116779,0.0);
+    cc0[100001] = Quantity(0.618444,0.0);
+    cc0[100002] = Quantity(0.264777,0.0);
+    cc0[200000] = Quantity(0.265864,0.0);
+    cc0[200001] = Quantity(0.615872,0.0);
+    cc0[200002] = Quantity(0.118264,0.0);
+    cc0[300000] = Quantity(0.0374535,0.0);
+    cc0[300001] = Quantity(0.462547,0.0);
+    cc0[300002] = Quantity(0.462547,0.0);
+    cc0[300003] = Quantity(0.0374535,0.0);
 
-    // load up drifters all the way
-    while (true) {
-	auto depo = td();
-	if (!depo) { break; }
-	for (int ind=0; ind<3; ++ind) {
-	    Assert(drifters[ind]->insert(depo));
-	}
-    }
-    // and flush them out 
-    for (int ind=0; ind<3; ++ind) {
-	drifters[ind]->flush();
-    }
 
-    // diffuse 
+    IChannelSlice::pointer csp1(new SimpleChannelSlice(cstime0, cc0));
+    ChannelCharge cc = csp1->charge();
+    Assert(!cc.empty());
+    Assert(ccsel.insert(csp1));
+    ccsel.flush();
 
-    std::vector<Diffuser*> diffusers = {
-	new Diffuser(iwp->pitchU(), tick, now),
-	new Diffuser(iwp->pitchV(), tick, now),
-	new Diffuser(iwp->pitchW(), tick, now)
-    };
+    ICellSlice::pointer cellslice;
+    Assert(ccsel.extract(cellslice));
+    Assert (cellslice != ccsel.eos());
+    ICellVector cellsel = cellslice->cells();
+    Assert (!cellsel.empty());
+    cerr << "Selected " << cellsel.size() << " cells at t=" << cellslice->time() << endl;
 
-    while (true) {
-	int n_ok = 0;
-	for (int ind=0; ind < 3; ++ind) {
-	    IDepo::pointer depo;
-	    if (!drifters[ind]->extract(depo)) {
-		continue;
-	    }
-	    Assert(depo);
-	    Assert(diffusers[ind]->insert(depo));
-	    ++n_ok;
-	}
-	if (n_ok == 0) {
-	    break;
-	}
-	Assert(n_ok == 3);
-    }
-    for (int ind=0; ind < 3; ++ind) {
-	diffusers[ind]->flush();
-    }
-
-    // collect/induce
-
-    std::vector<PlaneDuctor*> ductors = {
-	new PlaneDuctor(WirePlaneId(kUlayer), tick, ray_length(iwp->pitchU()), tick, now),
-	new PlaneDuctor(WirePlaneId(kVlayer), tick, ray_length(iwp->pitchV()), tick, now),
-	new PlaneDuctor(WirePlaneId(kWlayer), tick, ray_length(iwp->pitchW()), tick, now)
-    };
-    while (true) {
-	int n_ok = 0;
-	int n_eos = 0;
-	for (int ind=0; ind < 3; ++ind) {
-	  IDiffusion::pointer diff;
-	    if (!diffusers[ind]->extract(diff)) {
-		cerr << "Diffuser #"<<ind<<" failed" << endl;
-		continue;
-	    }
-	    ++n_ok;
-	    if (!diff) {
-		cerr << "Diffuser #"<<ind<<" hits EOS" << endl;
-		++n_eos;
-		continue;
-	    }
-	    Assert(ductors[ind]->insert(diff));
-	}
-	Assert(n_ok == 3);
-	Assert(n_eos == 0 || n_eos == 3);
-	if (n_eos == 3) {
-	    cerr << "Got three EOS from diffusers" << endl;
-	    break;
-	}
-    }
-    for (int ind=0; ind < 3; ++ind) {
-	ductors[ind]->flush();
-    }
-
-    Digitizer digitizer;
-    digitizer.set_wires(wires);
-
-    while (true) {
-	IPlaneSliceVector psv(3);
-	int n_ok = 0;
-	int n_eos = 0;
-	for (int ind=0; ind<3; ++ind) {
-	    if (!ductors[ind]->extract(psv[ind])) {
-		cerr << "ductor #"<<ind<<" failed"<<endl;
-		continue;
-	    }
-	    ++n_ok;
-	    if (psv[ind] == ductors[ind]->eos()) {
-		++n_eos;
-	    }
-	}
-	if (n_ok == 0) {
-	    cerr << "Got no channel slices from plane ductors" << endl;
-	    break;
-	}
-	Assert(n_ok == 3);
-    }
+    app.pdf();
+    app.run();
     return 0;
 }
