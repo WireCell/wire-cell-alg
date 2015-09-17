@@ -22,6 +22,7 @@
 #include "WireCellRootVis/CanvasApp.h"
 #include "WireCellRootVis/Drawers.h"
 
+
 #include <iostream>
 #include <vector>
 #include <algorithm>		// count_if
@@ -32,12 +33,14 @@ using namespace std;
 TrackDepos make_tracks() {
     TrackDepos td;
 
-    const double cm = 10*units::cm;
+    const double cm = units::cm;
     Ray same_point(Point(cm,-cm,cm), Point(10*cm,+cm,30*cm));
 
     const double usec = units::microsecond;
 
-    td.add_track(1*usec, same_point);
+    td.add_track(10*usec, Ray(Point(cm,0,0), Point(2*cm,0,0)));
+    td.add_track(20*usec, Ray(Point(cm,0,0), Point(cm,0,cm)));
+    td.add_track(30*usec, Ray(Point(cm,-cm,-cm), Point(cm,cm,cm)));
     td.add_track(10*usec, same_point);
     td.add_track(100*usec, same_point);
     //td.add_track(1000*usec, same_point);
@@ -67,6 +70,41 @@ double time_offset(const Ray& pitch)
     return pitch.first.x()/drift_velocity;
 }
 
+// prepare a plane ductor
+PlaneDuctor* make_ductor(const Ray& pitch,
+			 WirePlaneLayer_t layer,
+			 const IWireVector& wires,
+			 double tick, double t0=0.0)
+{
+    WirePlaneId wpid(layer);
+    cerr<<"make_ductor(pitch=" << pitch << ",wpid=" << wpid << ")" << endl;
+
+    const double pitch_distance = ray_length(pitch);
+    const Vector pitch_unit = ray_unit(pitch);
+
+    // get this planes wires sorted by index
+    IWireVector plane_wires;
+    std::copy_if(wires.begin(), wires.end(),
+		 back_inserter(plane_wires), select_uvw_wires[wpid.index()]);
+    std::sort(plane_wires.begin(), plane_wires.end(), ascending_index);
+
+    // number of wires and location of wire zero measured in pitch coordinate.
+    const int nwires = plane_wires.size();
+    IWire::pointer wire_zero = plane_wires[0];
+    const Point to_wire = wire_zero->center() - pitch.first;
+    const double wire_zero_dist = pitch_unit.dot(to_wire);
+
+    // cerr << "Wire0 for plane=" << wpid.ident() << " distance=" << pitch_distance <<  " index=" << wire_zero->index() << endl;
+    // cerr << "\twire ray=" << wire_zero->ray() << endl;
+    // cerr << "\twire0 center=" << wire_zero->center() << endl;
+    // cerr << "\tto wire=" << to_wire << endl;
+    // cerr << "\tpitch = " << pitch_unit << endl;
+    // cerr << "\twire0 dist=" << wire_zero_dist << endl;
+
+    return new PlaneDuctor(wpid, nwires, tick, pitch_distance, t0, wire_zero_dist);
+}
+
+
 int main(int argc, char *argv[])
 {
     WireCellRootVis::CanvasApp app(argv[0], argc>1, 1000,1000);
@@ -91,10 +129,6 @@ int main(int argc, char *argv[])
     Assert(wg.extract(wires));
     Assert(wires.size());
     WireCellRootVis::draw2d(app.pad(), wires);
-
-    const int nwiresU = std::count_if(wires.begin(), wires.end(), select_u_wires);
-    const int nwiresV = std::count_if(wires.begin(), wires.end(), select_v_wires);
-    const int nwiresW = std::count_if(wires.begin(), wires.end(), select_w_wires);
 
     BoundCells bc;
     bc.insert(wires);
@@ -165,10 +199,11 @@ int main(int argc, char *argv[])
     // collect/induce
 
     std::vector<PlaneDuctor*> ductors = {
-	new PlaneDuctor(WirePlaneId(kUlayer), nwiresU, tick, ray_length(iwp->pitchU()), now),
-	new PlaneDuctor(WirePlaneId(kVlayer), nwiresV, tick, ray_length(iwp->pitchV()), now),
-	new PlaneDuctor(WirePlaneId(kWlayer), nwiresW, tick, ray_length(iwp->pitchW()), now)
+	make_ductor(iwp->pitchU(), kUlayer, wires, tick, now),
+	make_ductor(iwp->pitchV(), kVlayer, wires, tick, now),
+	make_ductor(iwp->pitchW(), kWlayer, wires, tick, now)
     };
+
     std::vector<IDiffusionVector> diffusions(3);
     while (true) {
 	int n_ok = 0;

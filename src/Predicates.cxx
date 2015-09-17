@@ -38,19 +38,19 @@ bool MaybeHitCell::operator()(const WireCell::ICell::pointer& cell) const
     }
 
 
-    if (count > 1) {
-	cerr << "MaybeHitCell: cell id: " << cell->ident() << " with wires:";
-	for (auto wire : cell->wires()) {
-	    const int ch = wire->channel();
-	    auto hit = cc.find(ch);
-	    Quantity q = 0;
-	    if (hit == cc.end()) {
-		q = hit->second;
-	    }
-	    cerr << " #" << ch << "/q=" << q;
-	}
-	cerr << endl;
-    }
+    // if (count > 1) {
+    // 	cerr << "MaybeHitCell: cell id: " << cell->ident() << " with wires:";
+    // 	for (auto wire : cell->wires()) {
+    // 	    const int ch = wire->channel();
+    // 	    auto hit = cc.find(ch);
+    // 	    Quantity q;
+    // 	    if (hit != cc.end()) {
+    // 		q = hit->second;
+    // 	    }
+    // 	    cerr << " #" << ch << "/q=" << q;
+    // 	}
+    // 	cerr << endl;
+    // }
 
     return count >= nmin;
 }
