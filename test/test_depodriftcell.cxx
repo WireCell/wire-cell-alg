@@ -173,18 +173,24 @@ int main(int argc, char *argv[])
 
     std::vector<IDepoVector> plane_depo(3);
     while (true) {
-	int n_ok = 0;
+	int n_ok = 3;
+	int n_eos = 0;
 	for (int ind=0; ind < 3; ++ind) {
 	    IDepo::pointer depo;
 	    if (!drifters[ind]->extract(depo)) {
+		cerr << "Failed to extract depo from drifter " << ind << endl;
+		--n_ok;
 		continue;
 	    }
-	    Assert(depo);
+	    if (depo == drifters[ind]->eos()) {
+		cerr << "EOS from drifter " << ind << endl;
+		++n_eos;
+		continue;
+	    }
 	    Assert(diffusers[ind]->insert(depo));
 	    plane_depo[ind].push_back(depo);
-	    ++n_ok;
 	}
-	if (n_ok == 0) {
+	if (n_ok == 0 || n_eos == 3) {
 	    break;
 	}
 	Assert(n_ok == 3);
@@ -311,14 +317,14 @@ int main(int argc, char *argv[])
 	ChannelCharge cc = csp->charge();
 	int ncharges = cc.size();
 	if (ncharges) {
-	    cout << "vvv CUT vvv" << endl;
-	    cout << "    double cstime" << nccs << " = " << csp->time() << ";" << endl;
-	    cout << "    ChannelCharge cc" << nccs << ";" << endl;
-	    for (auto cq: cc) {
-		cout << "    cc"<<nccs<<"["<< cq.first << "] = "
-		     << "Quantity(" << cq.second.mean() << "," << cq.second.sigma() << ");" << endl;
-	    }
-	    cout << "^^^ CUT ^^^" << endl;
+	    // cout << "vvv CUT vvv" << endl;
+	    // cout << "    double cstime" << nccs << " = " << csp->time() << ";" << endl;
+	    // cout << "    ChannelCharge cc" << nccs << ";" << endl;
+	    // for (auto cq: cc) {
+	    // 	cout << "    cc"<<nccs<<"["<< cq.first << "] = "
+	    // 	     << "Quantity(" << cq.second.mean() << "," << cq.second.sigma() << ");" << endl;
+	    // }
+	    // cout << "^^^ CUT ^^^" << endl;
 	    ++nccs;
 	}
 	Assert(ccsel.insert(csp));
