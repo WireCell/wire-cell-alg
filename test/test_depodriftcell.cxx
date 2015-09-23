@@ -317,14 +317,14 @@ int main(int argc, char *argv[])
 	ChannelCharge cc = csp->charge();
 	int ncharges = cc.size();
 	if (ncharges) {
-	    // cout << "vvv CUT vvv" << endl;
-	    // cout << "    double cstime" << nccs << " = " << csp->time() << ";" << endl;
-	    // cout << "    ChannelCharge cc" << nccs << ";" << endl;
-	    // for (auto cq: cc) {
-	    // 	cout << "    cc"<<nccs<<"["<< cq.first << "] = "
-	    // 	     << "Quantity(" << cq.second.mean() << "," << cq.second.sigma() << ");" << endl;
-	    // }
-	    // cout << "^^^ CUT ^^^" << endl;
+	    cout << "vvv CUT vvv" << endl;
+	    cout << "    double cstime" << nccs << " = " << csp->time() << ";" << endl;
+	    cout << "    ChannelCharge cc" << nccs << ";" << endl;
+	    for (auto cq: cc) {
+	    	cout << "    cc"<<nccs<<"["<< cq.first << "] = "
+	    	     << "Quantity(" << cq.second.mean() << "," << cq.second.sigma() << ");" << endl;
+	    }
+	    cout << "^^^ CUT ^^^" << endl;
 	    ++nccs;
 	}
 	Assert(ccsel.insert(csp));

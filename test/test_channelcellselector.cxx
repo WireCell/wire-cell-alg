@@ -55,18 +55,18 @@ int main(int argc, char *argv[])
 
     
     // get this numbers by running test_depodriftcell
-    double cstime0 = 62000;
+    double cstime0 = 16000;
     ChannelCharge cc0;
-    cc0[100000] = Quantity(0.116779,0.0);
-    cc0[100001] = Quantity(0.618444,0.0);
-    cc0[100002] = Quantity(0.264777,0.0);
-    cc0[200000] = Quantity(0.265864,0.0);
-    cc0[200001] = Quantity(0.615872,0.0);
-    cc0[200002] = Quantity(0.118264,0.0);
-    cc0[300000] = Quantity(0.0374535,0.0);
-    cc0[300001] = Quantity(0.462547,0.0);
-    cc0[300002] = Quantity(0.462547,0.0);
-    cc0[300003] = Quantity(0.0374535,0.0);
+    cc0[100065] = Quantity(1.5177,1.23195);
+    cc0[100066] = Quantity(1.5177,1.23195);
+    cc0[100067] = Quantity(9.85414,3.13913);
+    cc0[100068] = Quantity(0.120784,0.34754);
+    cc0[200065] = Quantity(8.58565,2.93013);
+    cc0[200066] = Quantity(4.43263,2.10538);
+    cc0[300049] = Quantity(1.52723,1.23581);
+    cc0[300050] = Quantity(2.50183,1.58172);
+    cc0[300051] = Quantity(8.61691,2.93546);
+    cc0[300052] = Quantity(0.380652,0.61697);
 
 
     IChannelSlice::pointer csp1(new SimpleChannelSlice(cstime0, cc0));
@@ -81,6 +81,8 @@ int main(int argc, char *argv[])
     ICellVector cellsel = cellslice->cells();
     Assert (!cellsel.empty());
     cerr << "Selected " << cellsel.size() << " cells at t=" << cellslice->time() << endl;
+
+    WireCellRootVis::draw2d(app.pad(), cellsel);
 
     app.pdf();
     app.run();
