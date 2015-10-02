@@ -51,7 +51,7 @@ TrackDepos make_tracks() {
 
 const double drift_velocity = 1.6*units::millimeter/units::microsecond;
 
-void draw_depos(TVirtualPad& pad, const IDepoVector& orig, const std::vector<IDepoVector>& planes)
+void draw_depos(TVirtualPad& pad, const IDepo::vector& orig, const std::vector<IDepo::vector>& planes)
 {
     pad.Divide(2,2);
     WireCellRootVis::draw2d(*pad.cd(1), orig);
@@ -73,7 +73,7 @@ double time_offset(const Ray& pitch)
 // prepare a plane ductor
 PlaneDuctor* make_ductor(const Ray& pitch,
 			 WirePlaneLayer_t layer,
-			 const IWireVector& wires,
+			 const IWire::shared_vector& wires,
 			 double tick, double t0=0.0)
 {
     WirePlaneId wpid(layer);
@@ -84,7 +84,7 @@ PlaneDuctor* make_ductor(const Ray& pitch,
 
     // get this planes wires sorted by index
     IWireVector plane_wires;
-    std::copy_if(wires.begin(), wires.end(),
+    std::copy_if(wires->begin(), wires->end(),
 		 back_inserter(plane_wires), select_uvw_wires[wpid.index()]);
     std::sort(plane_wires.begin(), plane_wires.end(), ascending_index);
 
@@ -120,23 +120,25 @@ int main(int argc, char *argv[])
     dump_pitch(iwp->pitchW());
 
 
-    WireCellRootVis::draw2d(app.pad(), iwp);
+    WireCellRootVis::draw2d(app.pad(), *iwp);
 
     WireGenerator wg;
     Assert(wg.insert(iwp));
 
-    IWireVector wires;
+    IWire::shared_vector wires;
     Assert(wg.extract(wires));
-    Assert(wires.size());
-    WireCellRootVis::draw2d(app.pad(), wires);
+    Assert(wires);
+    Assert(wires->size());
+    WireCellRootVis::draw2d(app.pad(), *wires);
 
     BoundCells bc;
     bc.insert(wires);
-    ICellVector cells;
+    ICell::shared_vector cells;
     bc.extract(cells);
+    Assert(cells);
 
-    cerr << "Make " << cells.size() << " cells" << endl;
-    WireCellRootVis::draw2d(app.pad(), cells);
+    cerr << "Make " << cells->size() << " cells" << endl;
+    WireCellRootVis::draw2d(app.pad(), *cells);
 
     TrackDepos td = make_tracks();
 
@@ -149,7 +151,7 @@ int main(int argc, char *argv[])
     };
 
     // load up drifters all the way
-    IDepoVector orig_depo;
+    IDepo::vector orig_depo;
     while (true) {
 	auto depo = td();
 	if (!depo) { break; }
@@ -182,7 +184,7 @@ int main(int argc, char *argv[])
 		--n_ok;
 		continue;
 	    }
-	    if (depo == drifters[ind]->eos()) {
+	    if (!depo) {
 		cerr << "EOS from drifter " << ind << endl;
 		++n_eos;
 		continue;
@@ -257,22 +259,21 @@ int main(int argc, char *argv[])
 
     bool pd_eos[3] = {false};
     while (true) {
-	IPlaneSliceVector psv(3);
+	IPlaneSlice::vector psv(3);
 	double slice_time = 0;
 	int n_eos = 3;
 	int n_cruns = 0;
 	for (int ind=0; ind<3; ++ind) {
 	    if (pd_eos[ind]) {			// already hit EOS on this ductor
-		psv[ind] = ductors[ind]->eos(); // null pad
+		psv[ind] = nullptr;
 		continue;	// allow all planes to run out
 	    }
 	    if (!ductors[ind]->extract(psv[ind])) {
 		cerr << "ductor extract #"<<ind<<" failed, interpreting as EOS"<<endl;
 		pd_eos[ind] = true;
-		psv[ind] = ductors[ind]->eos(); // null pad
 		continue;	// allow all planes to run out
 	    }
-	    if (psv[ind] == ductors[ind]->eos()) {
+	    if (!psv[ind]) {
 		pd_eos[ind] = true;
 		continue;
 	    }
@@ -280,7 +281,7 @@ int main(int argc, char *argv[])
 	    n_cruns += psv[ind]->charge_runs().size();
 	    slice_time = psv[ind]->time(); // for below
 	}
-	Assert(digitizer.insert(psv));
+	Assert(digitizer.insert(IPlaneSlice::shared_vector(new IPlaneSlice::vector(psv))));
 	if (n_eos == 3) {
 	    cerr << "Got EOS from all three plane ductors" << endl;
 	    break;
@@ -310,7 +311,7 @@ int main(int argc, char *argv[])
     while (true) {
 	IChannelSlice::pointer csp;
 	Assert(digitizer.extract(csp));
-	if (csp == digitizer.eos()) {
+	if (!csp) {
 	    cerr << "Digitizer reaches EOS" << endl;
 	    break;
 	}
@@ -335,13 +336,13 @@ int main(int argc, char *argv[])
     while (true) {
 	ICellSlice::pointer cellslice;
 	Assert(ccsel.extract(cellslice));
-	if (cellslice == ccsel.eos()) {
+	if (!cellslice) {
 	    cerr << "ChannelCellSelector reaches EOS" << endl;
 	    break;
 	}
-	ICellVector cellsel = cellslice->cells();
-	if (cellsel.size()) {
-	    cerr << "Selected " << cellsel.size() << " cells at t=" << cellslice->time() << endl;
+	ICell::shared_vector cellsel = cellslice->cells();
+	if (cellsel->size()) {
+	    cerr << "Selected " << cellsel->size() << " cells at t=" << cellslice->time() << endl;
 	}
     }
 

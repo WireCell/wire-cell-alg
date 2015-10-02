@@ -75,7 +75,7 @@ double time_offset(const Ray& pitch)
 // prepare a plane ductor
 IPlaneDuctor::pointer make_ductor(const Ray& pitch,
 				  WirePlaneLayer_t layer,
-				  const IWireVector& wires,
+				  const IWire::shared_vector& wires,
 				  double tick, double t0=0.0)
 {
     WirePlaneId wpid(layer);
@@ -86,7 +86,7 @@ IPlaneDuctor::pointer make_ductor(const Ray& pitch,
 
     // get this planes wires sorted by index
     IWireVector plane_wires;
-    std::copy_if(wires.begin(), wires.end(),
+    std::copy_if(wires->begin(), wires->end(),
 		 back_inserter(plane_wires), select_uvw_wires[wpid.index()]);
     std::sort(plane_wires.begin(), plane_wires.end(), ascending_index);
 
@@ -107,12 +107,12 @@ IPlaneDuctor::pointer make_ductor(const Ray& pitch,
 }
 
 
-void dump(CanvasApp& app, IWireParameters::pointer iwp)
+void dump(CanvasApp& app, const IWireParameters& iwp)
 {
 
-    dump_pitch(iwp->pitchU());
-    dump_pitch(iwp->pitchV());
-    dump_pitch(iwp->pitchW());
+    dump_pitch(iwp.pitchU());
+    dump_pitch(iwp.pitchV());
+    dump_pitch(iwp.pitchW());
     WireCellRootVis::draw2d(app.clear(), iwp);
     app.pdf();
 }
@@ -152,7 +152,7 @@ void dump(CanvasApp& app, const ICellSliceVector& cell_slices)
     WireCellRootVis::draw3d(app.clear(), cell_slices);
     app.pdf();
     for (auto cs : cell_slices) {
-	WireCellRootVis::draw2d(app.clear(), cs->cells());
+	WireCellRootVis::draw2d(app.clear(), *cs->cells());
 	app.pdf();
     }
 }
@@ -163,117 +163,148 @@ IWireParameters::pointer do_wireparameters()
     return iwp;
 }
 
-IWireVector do_wires(IWireParameters::pointer iwp)
+IWire::shared_vector do_wires(IWireParameters::pointer iwp)
 {
     WireGenerator wg;
     Assert(wg.insert(iwp));
 
-    IWireVector wires;
+    IWire::shared_vector wires;
     Assert(wg.extract(wires));
-    Assert(!wires.empty());
+    Assert(wires);
+    Assert(!wires->empty());
     return wires;
 }
 
-ICellVector do_cells(const IWireVector& wires)
+ICell::shared_vector do_cells(IWire::shared_vector wires)
 {
     BoundCells bc;
     Assert(bc.insert(wires));
-    ICellVector cells;
+    ICell::shared_vector cells;
     Assert(bc.extract(cells));
-    Assert(!cells.empty());
+    Assert(cells);
+    Assert(!cells->empty());
     return cells;
 }
 
-IDepoVector do_deposition()
+IDepo::shared_vector do_deposition()
 {
     TrackDepos td = make_tracks();
-    IDepoVector depos;
+    IDepo::vector* depos = new IDepo::vector;
     while (true) {
 	auto depo = td();
 	if (!depo) { break; }
-	depos.push_back(depo);
+	depos->push_back(depo);
     }
-    return depos;
+    return IDepo::shared_vector(depos);
 }
 
-IDepoVector do_drift(const IDepoVector& activity, double to_x)
+template<typename Action>
+std::shared_ptr<std::vector<typename Action::output_type> >
+do_vector_action(Action& action, const std::vector<typename Action::input_type>& input)
+{
+    for (auto in : input) {
+	Assert(action.insert(in));
+    }
+    IBuffering* b = dynamic_cast<IBuffering*>(&action);
+    if (b) { b->flush(); }
+    
+    typedef std::vector<typename Action::output_type> vector_type;
+    vector_type* ret = new vector_type;
+    while (true) {
+	typename Action::output_type out;
+	Assert(action.extract(out));
+	if (!out) {		// eos
+	    break;
+	}
+	ret->push_back(out);
+    }
+    return std::shared_ptr<vector_type>(ret);
+}
+
+IDepo::shared_vector do_drift(const IDepo::vector& activity, double to_x)
 {
     Drifter drifter(to_x);
 
 
-    for (auto depo : activity) { // fully load
-	Assert(drifter.insert(depo));
-    }
+    // for (auto depo : activity) { // fully load
+    // 	Assert(drifter.insert(depo));
+    // }
 
-    // fully process
-    drifter.flush();
+    // // fully process
+    // drifter.flush();
 
-    // fully drain
-    IDepoVector drifted;
-    while (true) {
-	IDepo::pointer depo;
-	Assert(drifter.extract(depo));
-	if (depo == drifter.eos()) {
-	    break;
-	}
-	drifted.push_back(depo);
-    }
+    // // fully drain
+    // IDepoVector drifted;
+    // while (true) {
+    // 	IDepo::pointer depo;
+    // 	Assert(drifter.extract(depo));
+    // 	if (!depo) {
+    // 	    break;
+    // 	}
+    // 	drifted.push_back(depo);
+    // }
 
-    return drifted;
+    // return drifted;
+
+    return do_vector_action(drifter, activity);
 }
 
-IDiffusionVector do_diffusion(const IDepoVector& depos, const Ray& pitch, double tick, double now)
+IDiffusion::shared_vector do_diffusion(const IDepo::vector& depos, const Ray& pitch, double tick, double now) 
 {
     Diffuser diffuser(pitch, tick, time_offset(pitch), now);
 
-    for (auto depo : depos) {	// fully load
-	Assert(diffuser.insert(depo));
-    }
+    // for (auto depo : depos) {	// fully load
+    // 	Assert(diffuser.insert(depo));
+    // }
 
-    // fully process
-    diffuser.flush();
+    // // fully process
+    // diffuser.flush();
 
-    // fully drain
-    IDiffusionVector diffused;
-    while (true) {
-	IDiffusion::pointer diff;
-	Assert(diffuser.extract(diff));
-	if (diff == diffuser.eos()) {
-	    break;
-	}
-	diffused.push_back(diff);
-    }
-    return diffused;
+    // // fully drain
+    // IDiffusionVector diffused;
+    // while (true) {
+    // 	IDiffusion::pointer diff;
+    // 	Assert(diffuser.extract(diff));
+    // 	if (!diff) {
+    // 	    break;
+    // 	}
+    // 	diffused.push_back(diff);
+    // }
+    // return diffused;
+    return do_vector_action(diffuser, depos);
 }
 
-IPlaneSliceVector do_ductor(const IWireVector& wires,
-			    const IDiffusionVector& diffused, const Ray& pitch,
-			    WirePlaneLayer_t layer, double tick, double now)
+IPlaneSlice::shared_vector do_ductor(const IDiffusion::vector& diffused,
+				     const IWire::shared_vector& wires,
+				     const Ray& pitch,
+				     WirePlaneLayer_t layer, double tick, double now)
 {
     IPlaneDuctor::pointer ductor = make_ductor(pitch, layer, wires, tick, now);
 
-    for (auto diff : diffused) { // fully load
-	Assert(ductor->insert(diff));
-    }
+    // for (auto diff : diffused) { // fully load
+    // 	Assert(ductor->insert(diff));
+    // }
 
-    // fully process
-    ductor->flush();
+    // // fully process
+    // ductor->flush();
 
-    // fully drain;
-    IPlaneSliceVector psv;
-    while (true) {
-	IPlaneSlice::pointer ps;
-	Assert(ductor->extract(ps));
-	if (ps == ductor->eos()) {
-	    break;
-	}
-	psv.push_back(ps);
-    }
-    return psv;	
+    // // fully drain;
+    // IPlaneSliceVector psv;
+    // while (true) {
+    // 	IPlaneSlice::pointer ps;
+    // 	Assert(ductor->extract(ps));
+    // 	if (!ps) {
+    // 	    break;
+    // 	}
+    // 	psv.push_back(ps);
+    // }
+    // return psv;	
+
+    return do_vector_action(*ductor, diffused);
 }
 
-IChannelSliceVector do_digitizer(const IWireVector& wires,
-				 const std::vector<IPlaneSliceVector> psvs_byplane)
+IChannelSlice::shared_vector do_digitizer(const IWire::shared_vector& wires,
+					  const std::vector<IPlaneSlice::shared_vector> psvs_byplane)
 {
     Digitizer digitizer;
     digitizer.set_wires(wires);
@@ -281,11 +312,11 @@ IChannelSliceVector do_digitizer(const IWireVector& wires,
     // repackage and fully load up
     int islice = 0;
     while (true) {
-	IPlaneSliceVector psv(3);
+	IPlaneSlice::vector* psv = new IPlaneSlice::vector(3);
 	int n_filled = 0;
 	for (int ind=0; ind<3; ++ind) {
-	    if (islice < psvs_byplane[ind].size()) {
-		psv[ind] = psvs_byplane[ind][islice];
+	    if (islice < psvs_byplane[ind]->size()) {
+		(*psv)[ind] = psvs_byplane[ind]->at(islice);
 		++n_filled;
 	    }
 	}
@@ -293,46 +324,53 @@ IChannelSliceVector do_digitizer(const IWireVector& wires,
 	if (!n_filled) {
 	    break;
 	}
-	Assert(digitizer.insert(psv));
+	
+	Assert(digitizer.insert(IPlaneSlice::shared_vector(psv)));
     }
 
-    digitizer.flush();
+    //digitizer.flush();
+    IBuffering* b = dynamic_cast<IBuffering*>(&digitizer);
+    if (b) { b->flush(); }
 
-    IChannelSliceVector frame;
+
+    IChannelSlice::vector* frame = new IChannelSlice::vector;
     while (true) {
 	IChannelSlice::pointer csp;
 	Assert(digitizer.extract(csp));
-	if (csp == digitizer.eos()) {
+	if (!csp) {
 	    break;
 	}
-	frame.push_back(csp);
+	frame->push_back(csp);
     }
-    return frame;
+    return IChannelSlice::shared_vector(frame);
 }
 
 
-ICellSliceVector do_channelcellselector(const ICellVector& cells, const IChannelSliceVector& frame)
+ICellSlice::shared_vector do_channelcellselector(const ICell::shared_vector& cells,
+						 const IChannelSlice::shared_vector& frame)
 {
     ChannelCellSelector ccsel(0.0, 3);
     ccsel.set_cells(cells);
 
     // load up
-    for (auto cs : frame) {
+    for (auto cs : *frame) {
 	Assert(ccsel.insert(cs));
     }
 
-    ccsel.flush();
+    //ccsel.flush();
+    IBuffering* b = dynamic_cast<IBuffering*>(&ccsel);
+    if (b) { b->flush(); }
 
-    ICellSliceVector cell_slices;
+    ICellSlice::vector* cell_slices = new ICellSlice::vector;
     while (true) {
 	ICellSlice::pointer cellslice;
 	Assert(ccsel.extract(cellslice));
-	if (cellslice == ccsel.eos()) {
+	if (!cellslice) {
 	    break;
 	}
-	cell_slices.push_back(cellslice);
+	cell_slices->push_back(cellslice);
     }
-    return cell_slices;
+    return ICellSlice::shared_vector(cell_slices);
 }
 
 
@@ -346,60 +384,60 @@ int main(int argc, char *argv[])
     double now = 0.0*units::microsecond;
 
     IWireParameters::pointer iwp = do_wireparameters();
-    dump(app, iwp);
+    dump(app, *iwp);
     cerr << em("made wire pa rams") << endl;
 
 
-    IWireVector wires = do_wires(iwp);    
-    dump(app, wires);
+    IWire::shared_vector wires = do_wires(iwp);    
+    dump(app, *wires);
     cerr << em("made wires") << endl;
 
-    ICellVector cells = do_cells(wires);
-    dump(app, cells);
+    ICell::shared_vector cells = do_cells(wires);
+    dump(app, *cells);
     cerr << em("made cells") << endl;
 
-    IDepoVector activity = do_deposition();
-    dump(app, activity);
+    IDepo::shared_vector activity = do_deposition();
+    dump(app, *activity);
     cerr << em("made activity") << endl;
 
-    std::vector<IDepoVector> plane_depos = {
-	do_drift(activity, iwp->pitchU().first.x()),
-	do_drift(activity, iwp->pitchV().first.x()),
-	do_drift(activity, iwp->pitchW().first.x())
+    std::vector<IDepo::shared_vector> plane_depos = {
+	do_drift(*activity, iwp->pitchU().first.x()),
+	do_drift(*activity, iwp->pitchV().first.x()),
+	do_drift(*activity, iwp->pitchW().first.x())
     };
     for (auto depo : plane_depos) {
-	dump(app, depo);
+	dump(app, *depo);
     }
     cerr << em("drifted") << endl;
 
     // diffuse 
-    std::vector<IDiffusionVector> diffused = {
-	do_diffusion(plane_depos[0], iwp->pitchU(), tick, now),
-	do_diffusion(plane_depos[1], iwp->pitchV(), tick, now),
-	do_diffusion(plane_depos[2], iwp->pitchW(), tick, now)
+    std::vector<IDiffusion::shared_vector> diffused = {
+	do_diffusion(*plane_depos[0], iwp->pitchU(), tick, now),
+	do_diffusion(*plane_depos[1], iwp->pitchV(), tick, now),
+	do_diffusion(*plane_depos[2], iwp->pitchW(), tick, now)
     };
     for (auto diff : diffused) {
-	dump(app, diff);
+	dump(app, *diff);
     }
     cerr << em("diffused") << endl;
 
     // collect/induce
-    std::vector<IPlaneSliceVector> psvs_byplane = {
-	do_ductor(wires, diffused[0], iwp->pitchU(), kUlayer, tick, now),
-	do_ductor(wires, diffused[1], iwp->pitchV(), kVlayer, tick, now),
-	do_ductor(wires, diffused[2], iwp->pitchW(), kWlayer, tick, now)
+    std::vector<IPlaneSlice::shared_vector> psvs_byplane = {
+	do_ductor(*diffused[0], wires, iwp->pitchU(), kUlayer, tick, now),
+	do_ductor(*diffused[1], wires, iwp->pitchV(), kVlayer, tick, now),
+	do_ductor(*diffused[2], wires, iwp->pitchW(), kWlayer, tick, now)
     };
     for (auto psv : psvs_byplane) {
-	dump(app, psv);
+	dump(app, *psv);
     }
     cerr << em("sliced") << endl;
 
-    IChannelSliceVector frame = do_digitizer(wires, psvs_byplane);
-    dump(app, frame);
+    IChannelSlice::shared_vector frame = do_digitizer(wires, psvs_byplane);
+    dump(app, *frame);
     cerr << em("digitized") << endl;
 
-    ICellSliceVector cell_slices = do_channelcellselector(cells, frame);
-    dump(app, cell_slices);
+    ICellSlice::shared_vector cell_slices = do_channelcellselector(cells, frame);
+    dump(app, *cell_slices);
     cerr << em("selected cells") << endl;
 
     cerr << em.summary() << endl;

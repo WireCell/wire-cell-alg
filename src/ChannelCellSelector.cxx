@@ -10,18 +10,18 @@ using namespace std;
 // fixme: move into iface/Simple
 class SimpleCellSlice : public ICellSlice {
     double m_time;
-    ICellVector m_cells;
+    ICell::shared_vector m_cells;
 public:
-    SimpleCellSlice(double t, const ICellVector& c)
-	: m_time(t), m_cells(c) { }
+    SimpleCellSlice(double t, const ICell::vector& c)
+	: m_time(t), m_cells(new ICell::vector(c)) { }
     virtual ~SimpleCellSlice() {}
     
     virtual double time() const { return m_time; }
 
-    virtual ICellVector cells() const { return m_cells; }
+    virtual ICell::shared_vector cells() const { return m_cells; }
 };
 
-void ChannelCellSelector::set_cells(const ICellVector& all_cells)
+void ChannelCellSelector::set_cells(const ICell::shared_vector& all_cells)
 {
     m_all_cells = all_cells;
 }
@@ -32,11 +32,16 @@ void ChannelCellSelector::reset()
 }
 void ChannelCellSelector::flush()
 {
-    m_output.push_back(eos());
+    m_output.push_back(nullptr);
 }
 bool ChannelCellSelector::insert(const input_type& in)
 {
-    if (m_all_cells.empty()) {
+    if (!in) {
+	flush();
+	return true;
+    }
+
+    if (m_all_cells->empty()) {
 	return false;
     }
 
@@ -46,8 +51,8 @@ bool ChannelCellSelector::insert(const input_type& in)
     }
 
     MaybeHitCell mhc(cc, m_qmin, m_nmin);
-    ICellVector cells;
-    std::copy_if(m_all_cells.begin(), m_all_cells.end(), back_inserter(cells), mhc);
+    ICell::vector cells;
+    std::copy_if(m_all_cells->begin(), m_all_cells->end(), back_inserter(cells), mhc);
     if (cells.empty()) {
 	cerr << "ChannelCellSelector: no cells found at t=" << in->time() << endl;
 	return true;

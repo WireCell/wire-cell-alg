@@ -32,23 +32,27 @@ int main(int argc, char *argv[])
     IWireParameters::pointer iwp(new WireParams);
 
 
-    WireCellRootVis::draw2d(app.pad(), iwp);
+    WireCellRootVis::draw2d(app.pad(), *iwp);
 
     WireGenerator wg;
     Assert(wg.insert(iwp));
 
-    IWireVector wires;
+    WireGenerator::output_type wires;
     Assert(wg.extract(wires));
-    Assert(wires.size());
-    WireCellRootVis::draw2d(app.pad(), wires);
+    Assert(wires);
+    Assert(wires->size());
+    WireCellRootVis::draw2d(app.pad(), *wires);
 
     BoundCells bc;
     bc.insert(wires);
-    ICellVector cells;
+    BoundCells::output_type cells;
     bc.extract(cells);
+    Assert(cells);
+    Assert(cells->size());
 
-    cerr << "Make " << cells.size() << " cells" << endl;
-    WireCellRootVis::draw2d(app.pad(), cells);
+    cerr << "Make " << cells->size() << " cells" << endl;
+
+    WireCellRootVis::draw2d(app.pad(), *cells);
 
     ChannelCellSelector ccsel(0.0, 3);
     ccsel.set_cells(cells);
@@ -75,14 +79,14 @@ int main(int argc, char *argv[])
     Assert(ccsel.insert(csp1));
     ccsel.flush();
 
-    ICellSlice::pointer cellslice;
+    ChannelCellSelector::output_type cellslice;
     Assert(ccsel.extract(cellslice));
-    Assert (cellslice != ccsel.eos());
-    ICellVector cellsel = cellslice->cells();
-    Assert (!cellsel.empty());
-    cerr << "Selected " << cellsel.size() << " cells at t=" << cellslice->time() << endl;
+    Assert(cellslice);
+    ICell::shared_vector cellsel = cellslice->cells();
+    Assert (!cellsel->empty());
+    cerr << "Selected " << cellsel->size() << " cells at t=" << cellslice->time() << endl;
 
-    WireCellRootVis::draw2d(app.pad(), cellsel);
+    WireCellRootVis::draw2d(app.pad(), *cellsel);
 
     app.pdf();
     app.run();
