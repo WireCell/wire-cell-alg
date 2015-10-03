@@ -1,7 +1,8 @@
 #include "WireCellAlg/Predicates.h"
 #include "WireCellIface/IChannelSlice.h"
 #include "WireCellIface/ICell.h"
-#include "WireCellIface/Simple.h"
+#include "WireCellIface/SimpleWire.h"
+#include "WireCellIface/SimpleCell.h"
 
 #include "WireCellUtil/Testing.h"
 
@@ -20,9 +21,9 @@ int main() {
     cc[3] = 3;
     
     IWireVector wires = {
-	IWire::pointer(new SimpleWire(WirePlaneId(kUlayer), 0, 1, Ray())),
-	IWire::pointer(new SimpleWire(WirePlaneId(kVlayer), 0, 2, Ray())),
-	IWire::pointer(new SimpleWire(WirePlaneId(kWlayer), 0, 3, Ray())),
+	IWire::pointer(new SimpleWire(WirePlaneId(kUlayer), 10001, 0, 1, Ray())),
+	IWire::pointer(new SimpleWire(WirePlaneId(kVlayer), 10002, 0, 2, Ray())),
+	IWire::pointer(new SimpleWire(WirePlaneId(kWlayer), 10003, 0, 3, Ray())),
     };
 
     Assert(3 == wires.size());
