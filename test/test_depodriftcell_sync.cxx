@@ -205,8 +205,7 @@ do_vector_action(Action& action, const std::vector<typename Action::input_type>&
     for (auto in : input) {
 	Assert(action.insert(in));
     }
-    IBuffering* b = dynamic_cast<IBuffering*>(&action);
-    if (b) { b->flush(); }
+    Assert(action.insert(nullptr));
     
     typedef std::vector<typename Action::output_type> vector_type;
     vector_type* ret = new vector_type;
@@ -224,53 +223,12 @@ do_vector_action(Action& action, const std::vector<typename Action::input_type>&
 IDepo::shared_vector do_drift(const IDepo::vector& activity, double to_x)
 {
     Drifter drifter(to_x);
-
-
-    // for (auto depo : activity) { // fully load
-    // 	Assert(drifter.insert(depo));
-    // }
-
-    // // fully process
-    // drifter.flush();
-
-    // // fully drain
-    // IDepoVector drifted;
-    // while (true) {
-    // 	IDepo::pointer depo;
-    // 	Assert(drifter.extract(depo));
-    // 	if (!depo) {
-    // 	    break;
-    // 	}
-    // 	drifted.push_back(depo);
-    // }
-
-    // return drifted;
-
     return do_vector_action(drifter, activity);
 }
 
 IDiffusion::shared_vector do_diffusion(const IDepo::vector& depos, const Ray& pitch, double tick, double now) 
 {
     Diffuser diffuser(pitch, tick, time_offset(pitch), now);
-
-    // for (auto depo : depos) {	// fully load
-    // 	Assert(diffuser.insert(depo));
-    // }
-
-    // // fully process
-    // diffuser.flush();
-
-    // // fully drain
-    // IDiffusionVector diffused;
-    // while (true) {
-    // 	IDiffusion::pointer diff;
-    // 	Assert(diffuser.extract(diff));
-    // 	if (!diff) {
-    // 	    break;
-    // 	}
-    // 	diffused.push_back(diff);
-    // }
-    // return diffused;
     return do_vector_action(diffuser, depos);
 }
 
@@ -280,26 +238,6 @@ IPlaneSlice::shared_vector do_ductor(const IDiffusion::vector& diffused,
 				     WirePlaneLayer_t layer, double tick, double now)
 {
     IPlaneDuctor::pointer ductor = make_ductor(pitch, layer, wires, tick, now);
-
-    // for (auto diff : diffused) { // fully load
-    // 	Assert(ductor->insert(diff));
-    // }
-
-    // // fully process
-    // ductor->flush();
-
-    // // fully drain;
-    // IPlaneSliceVector psv;
-    // while (true) {
-    // 	IPlaneSlice::pointer ps;
-    // 	Assert(ductor->extract(ps));
-    // 	if (!ps) {
-    // 	    break;
-    // 	}
-    // 	psv.push_back(ps);
-    // }
-    // return psv;	
-
     return do_vector_action(*ductor, diffused);
 }
 
@@ -327,11 +265,7 @@ IChannelSlice::shared_vector do_digitizer(const IWire::shared_vector& wires,
 	
 	Assert(digitizer.insert(IPlaneSlice::shared_vector(psv)));
     }
-
-    //digitizer.flush();
-    IBuffering* b = dynamic_cast<IBuffering*>(&digitizer);
-    if (b) { b->flush(); }
-
+    Assert(digitizer.insert(nullptr));
 
     IChannelSlice::vector* frame = new IChannelSlice::vector;
     while (true) {
@@ -356,10 +290,7 @@ ICellSlice::shared_vector do_channelcellselector(const ICell::shared_vector& cel
     for (auto cs : *frame) {
 	Assert(ccsel.insert(cs));
     }
-
-    //ccsel.flush();
-    IBuffering* b = dynamic_cast<IBuffering*>(&ccsel);
-    if (b) { b->flush(); }
+    Assert(ccsel.insert(nullptr));
 
     ICellSlice::vector* cell_slices = new ICellSlice::vector;
     while (true) {

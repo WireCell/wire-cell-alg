@@ -2,7 +2,6 @@
 #define WIRECELLIFACE_CHANNELCELLSELECTOR
 
 #include "WireCellIface/IChannelCellSelector.h"
-#include "WireCellIface/IBuffering.h"
 
 #include <deque>
 
@@ -12,7 +11,7 @@ namespace WireCell {
      *
      * See that class for details.
      */
-    class ChannelCellSelector : public IChannelCellSelector, public IBuffering
+    class ChannelCellSelector : public IChannelCellSelector
     {
     public:
 	ChannelCellSelector(double charge_threshold = 0.0,
@@ -25,13 +24,13 @@ namespace WireCell {
 
 	virtual void reset();
 
-	virtual void flush();
-
 	virtual bool insert(const input_type& in);
 
 	virtual bool extract(output_type& out);
 
     private:
+	void flush();
+
 	double m_qmin;
 	int m_nmin;
 	std::deque<output_type> m_output;

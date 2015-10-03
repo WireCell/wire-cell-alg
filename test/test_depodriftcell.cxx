@@ -154,15 +154,14 @@ int main(int argc, char *argv[])
     IDepo::vector orig_depo;
     while (true) {
 	auto depo = td();
-	if (!depo) { break; }
-	orig_depo.push_back(depo);
 	for (int ind=0; ind<3; ++ind) {
 	    Assert(drifters[ind]->insert(depo));
 	}
-    }
-    // and flush them out 
-    for (int ind=0; ind<3; ++ind) {
-	drifters[ind]->flush();
+	if (depo) {
+	    orig_depo.push_back(depo);
+	    continue;
+	}
+	break;
     }
 
     // diffuse 
@@ -174,31 +173,23 @@ int main(int argc, char *argv[])
     };
 
     std::vector<IDepoVector> plane_depo(3);
-    while (true) {
-	int n_ok = 3;
-	int n_eos = 0;
+    bool flow[3] = {true,true,true};
+    while (flow[0] || flow[1] || flow[2]) {
 	for (int ind=0; ind < 3; ++ind) {
-	    IDepo::pointer depo;
-	    if (!drifters[ind]->extract(depo)) {
-		cerr << "Failed to extract depo from drifter " << ind << endl;
-		--n_ok;
+	    if (!flow[ind]) {
+		//cerr << "Skip drifter " << ind << " at EOS" << endl; 
 		continue;
 	    }
+	    IDepo::pointer depo;
+	    Assert(drifters[ind]->extract(depo));
+	    Assert(diffusers[ind]->insert(depo));	    
 	    if (!depo) {
 		cerr << "EOS from drifter " << ind << endl;
-		++n_eos;
+		flow[ind] = false;
 		continue;
 	    }
-	    Assert(diffusers[ind]->insert(depo));
-	    plane_depo[ind].push_back(depo);
+	    plane_depo[ind].push_back(depo); // save for plotting
 	}
-	if (n_ok == 0 || n_eos == 3) {
-	    break;
-	}
-	Assert(n_ok == 3);
-    }
-    for (int ind=0; ind < 3; ++ind) {
-	diffusers[ind]->flush();
     }
 
     cerr << "Total depositions: " << orig_depo.size() << endl;
@@ -248,12 +239,6 @@ int main(int argc, char *argv[])
     WireCellRootVis::draw2d(app.pad(), diffusions[1]);
     WireCellRootVis::draw2d(app.pad(), diffusions[2]);
 
-    for (int ind=0; ind < 3; ++ind) {
-	ductors[ind]->flush();
-	//cerr << "Flushed  ductor[" << ind << "] with #inqueue=" << ductors[ind]->ninput()
-	//     << " #outqueue=" << ductors[ind]->noutput() << endl;
-    }
-
     Digitizer digitizer;
     digitizer.set_wires(wires);
 
@@ -301,9 +286,9 @@ int main(int argc, char *argv[])
 
 	continue;      // allow all planes to run out until all at EOS
     }
-    
-    digitizer.flush();
+    Assert(digitizer.insert(nullptr)); // flush with EOS
 
+    
     ChannelCellSelector ccsel(0.0, 3);
     ccsel.set_cells(cells);
 
@@ -330,8 +315,7 @@ int main(int argc, char *argv[])
 	}
 	Assert(ccsel.insert(csp));
     }
-
-    ccsel.flush();
+    Assert(ccsel.insert(nullptr)); // flush with EOS
 
     while (true) {
 	ICellSlice::pointer cellslice;

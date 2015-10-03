@@ -77,7 +77,6 @@ int main(int argc, char *argv[])
     ChannelCharge cc = csp1->charge();
     Assert(!cc.empty());
     Assert(ccsel.insert(csp1));
-    ccsel.flush();
 
     ChannelCellSelector::output_type cellslice;
     Assert(ccsel.extract(cellslice));
