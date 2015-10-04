@@ -20,7 +20,7 @@ int main() {
     cc[2] = 2;
     cc[3] = 3;
     
-    IWireVector wires = {
+    IWire::vector wires = {
 	IWire::pointer(new SimpleWire(WirePlaneId(kUlayer), 10001, 0, 1, Ray())),
 	IWire::pointer(new SimpleWire(WirePlaneId(kVlayer), 10002, 0, 2, Ray())),
 	IWire::pointer(new SimpleWire(WirePlaneId(kWlayer), 10003, 0, 3, Ray())),
@@ -29,12 +29,12 @@ int main() {
     Assert(3 == wires.size());
 
     ICell * test = new SimpleCell(0, wires);
-    IWireVector blah = test->wires();
+    IWire::vector blah = test->wires();
     cout << "Got " << blah.size() << " wires" << endl;
 
     Assert(test->wires().size() == 3);
 
-    ICellVector cells = {
+    ICell::vector cells = {
 	ICell::pointer(new SimpleCell(0, wires)),
     };
 

@@ -53,7 +53,7 @@ TrackDepos make_tracks() {
 
 const double drift_velocity = 1.6*units::millimeter/units::microsecond;
 
-void draw_depos(TVirtualPad& pad, const IDepoVector& orig, const std::vector<IDepoVector>& planes)
+void draw_depos(TVirtualPad& pad, const IDepo::vector& orig, const std::vector<IDepo::vector>& planes)
 {
     pad.Divide(2,2);
     WireCellRootVis::draw2d(*pad.cd(1), orig);
@@ -85,7 +85,7 @@ IPlaneDuctor::pointer make_ductor(const Ray& pitch,
     const Vector pitch_unit = ray_unit(pitch);
 
     // get this planes wires sorted by index
-    IWireVector plane_wires;
+    IWire::vector plane_wires;
     std::copy_if(wires->begin(), wires->end(),
 		 back_inserter(plane_wires), select_uvw_wires[wpid.index()]);
     std::sort(plane_wires.begin(), plane_wires.end(), ascending_index);
@@ -118,36 +118,36 @@ void dump(CanvasApp& app, const IWireParameters& iwp)
 }
 
 
-void dump(CanvasApp& app, const IWireVector& wires)
+void dump(CanvasApp& app, const IWire::vector& wires)
 {
     WireCellRootVis::draw2d(app.clear(), wires);
     app.pdf();
 }
-void dump(CanvasApp& app, const ICellVector& cells)
+void dump(CanvasApp& app, const ICell::vector& cells)
 {
     cerr << "Make " << cells.size() << " cells" << endl;
     WireCellRootVis::draw2d(app.pad(), cells);
 }
 
-void dump(CanvasApp& app, const IDepoVector& depos)
+void dump(CanvasApp& app, const IDepo::vector& depos)
 {
     WireCellRootVis::draw2d(app.clear(), depos);
 }
 
-void dump(CanvasApp& app, const IDiffusionVector& diffs)
+void dump(CanvasApp& app, const IDiffusion::vector& diffs)
 {
     WireCellRootVis::draw2d(app.clear(), diffs);
     app.pdf();
 }
 
-void dump(CanvasApp& app, const IPlaneSliceVector& psv)
+void dump(CanvasApp& app, const IPlaneSlice::vector& psv)
 {
 }
-void dump(CanvasApp& app, const IChannelSliceVector& csv)
+void dump(CanvasApp& app, const IChannelSlice::vector& csv)
 {
 }
 
-void dump(CanvasApp& app, const ICellSliceVector& cell_slices)
+void dump(CanvasApp& app, const ICellSlice::vector& cell_slices)
 {
     WireCellRootVis::draw3d(app.clear(), cell_slices);
     app.pdf();
@@ -198,14 +198,19 @@ IDepo::shared_vector do_deposition()
     return IDepo::shared_vector(depos);
 }
 
+/// Run a generic action on a vector of Action::input_type producing a
+/// vector of Action::output_type.  The vector of input may be
+/// optionally nullptr-terminated.  The resulting vector of output
+/// will not be.
 template<typename Action>
 std::shared_ptr<std::vector<typename Action::output_type> >
 do_vector_action(Action& action, const std::vector<typename Action::input_type>& input)
 {
     for (auto in : input) {
+	if (!in) {break;}	// EOS was explicitly included in input
 	Assert(action.insert(in));
     }
-    Assert(action.insert(nullptr));
+    Assert(action.insert(nullptr)); // flush with EOS
     
     typedef std::vector<typename Action::output_type> vector_type;
     vector_type* ret = new vector_type;

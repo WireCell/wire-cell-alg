@@ -14,7 +14,7 @@ namespace WireCell {
      * ```c++
      * ChannelCharge cc = my_channel_slice->charge();
      * MaybeHitCell strong_selector(cc, 10.0, 3);
-     * ICellVector strong_cells, all_cells = ...;
+     * ICell::vector strong_cells, all_cells = ...;
      * std::copy_if(all_cells.begin(), all_cells.end(),
      *              std::back_inserter(strong_cells), 
      *              strong_selector);

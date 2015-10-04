@@ -83,7 +83,7 @@ PlaneDuctor* make_ductor(const Ray& pitch,
     const Vector pitch_unit = ray_unit(pitch);
 
     // get this planes wires sorted by index
-    IWireVector plane_wires;
+    IWire::vector plane_wires;
     std::copy_if(wires->begin(), wires->end(),
 		 back_inserter(plane_wires), select_uvw_wires[wpid.index()]);
     std::sort(plane_wires.begin(), plane_wires.end(), ascending_index);
@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
 	new Diffuser(iwp->pitchW(), tick, time_offset(iwp->pitchW()), now)
     };
 
-    std::vector<IDepoVector> plane_depo(3);
+    std::vector<IDepo::vector> plane_depo(3);
     bool flow[3] = {true,true,true};
     while (flow[0] || flow[1] || flow[2]) {
 	for (int ind=0; ind < 3; ++ind) {
@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
 	make_ductor(iwp->pitchW(), kWlayer, wires, tick, now)
     };
 
-    std::vector<IDiffusionVector> diffusions(3);
+    std::vector<IDiffusion::vector> diffusions(3);
     while (true) {
 	int n_ok = 0;
 	int n_eos = 0;
