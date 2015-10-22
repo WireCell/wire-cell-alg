@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     WireGenerator wg;
     Assert(wg.insert(iwp));
 
-    WireGenerator::output_type wires;
+    WireGenerator::output_pointer wires;
     Assert(wg.extract(wires));
     Assert(wires);
     Assert(wires->size());
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 
     BoundCells bc;
     bc.insert(wires);
-    BoundCells::output_type cells;
+    BoundCells::output_pointer cells;
     bc.extract(cells);
     Assert(cells);
     Assert(cells->size());
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     Assert(!cc.empty());
     Assert(ccsel.insert(csp1));
 
-    ChannelCellSelector::output_type cellslice;
+    ChannelCellSelector::output_pointer cellslice;
     Assert(ccsel.extract(cellslice));
     Assert(cellslice);
     ICell::shared_vector cellsel = cellslice->cells();

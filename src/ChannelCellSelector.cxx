@@ -34,7 +34,7 @@ void ChannelCellSelector::flush()
 {
     m_output.push_back(nullptr);
 }
-bool ChannelCellSelector::insert(const input_type& in)
+bool ChannelCellSelector::insert(const input_pointer& in)
 {
     if (!in) {
 	flush();
@@ -62,7 +62,7 @@ bool ChannelCellSelector::insert(const input_type& in)
 
     return true;
 }
-bool ChannelCellSelector::extract(output_type& out)
+bool ChannelCellSelector::extract(output_pointer& out)
 {
     if (m_output.empty()) {
 	return false;

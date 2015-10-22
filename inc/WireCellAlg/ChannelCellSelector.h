@@ -24,16 +24,16 @@ namespace WireCell {
 
 	virtual void reset();
 
-	virtual bool insert(const input_type& in);
+	virtual bool insert(const input_pointer& in);
 
-	virtual bool extract(output_type& out);
+	virtual bool extract(output_pointer& out);
 
     private:
 	void flush();
 
 	double m_qmin;
 	int m_nmin;
-	std::deque<output_type> m_output;
+	std::deque<output_pointer> m_output;
 	ICell::shared_vector m_all_cells;
     };
 }

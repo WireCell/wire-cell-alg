@@ -198,13 +198,13 @@ IDepo::shared_vector do_deposition()
     return IDepo::shared_vector(depos);
 }
 
-/// Run a generic action on a vector of Action::input_type producing a
-/// vector of Action::output_type.  The vector of input may be
+/// Run a generic action on a vector of Action::input_pointer producing a
+/// vector of Action::output_pointer.  The vector of input may be
 /// optionally nullptr-terminated.  The resulting vector of output
 /// will not be.
 template<typename Action>
-std::shared_ptr<std::vector<typename Action::output_type> >
-do_vector_action(Action& action, const std::vector<typename Action::input_type>& input)
+std::shared_ptr<std::vector<typename Action::output_pointer> >
+do_vector_action(Action& action, const std::vector<typename Action::input_pointer>& input)
 {
     for (auto in : input) {
 	if (!in) {break;}	// EOS was explicitly included in input
@@ -212,10 +212,10 @@ do_vector_action(Action& action, const std::vector<typename Action::input_type>&
     }
     Assert(action.insert(nullptr)); // flush with EOS
     
-    typedef std::vector<typename Action::output_type> vector_type;
+    typedef std::vector<typename Action::output_pointer> vector_type;
     vector_type* ret = new vector_type;
     while (true) {
-	typename Action::output_type out;
+	typename Action::output_pointer out;
 	Assert(action.extract(out));
 	if (!out) {		// eos
 	    break;
