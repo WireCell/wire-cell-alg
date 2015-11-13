@@ -31,8 +31,8 @@ namespace WireCell {
     private:
 	void flush();
 
-	double m_qmin;
-	int m_nmin;
+	const double m_qmin;
+	const int m_nmin;
 	std::deque<output_pointer> m_output;
 	ICell::shared_vector m_all_cells;
     };
