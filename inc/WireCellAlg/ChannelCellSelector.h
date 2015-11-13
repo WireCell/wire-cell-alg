@@ -22,18 +22,12 @@ namespace WireCell {
 
 	virtual void set_cells(const ICell::shared_vector& all_cells);
 
-	virtual void reset();
-
-	virtual bool insert(const input_pointer& in);
-
-	virtual bool extract(output_pointer& out);
+	virtual bool operator()(const input_pointer& in, output_pointer& out);
 
     private:
-	void flush();
 
 	const double m_qmin;
 	const int m_nmin;
-	std::deque<output_pointer> m_output;
 	ICell::shared_vector m_all_cells;
     };
 }

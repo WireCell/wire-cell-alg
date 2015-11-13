@@ -123,18 +123,15 @@ int main(int argc, char *argv[])
     WireCellRootVis::draw2d(app.pad(), *iwp);
 
     WireGenerator wg;
-    Assert(wg.insert(iwp));
-
     IWire::shared_vector wires;
-    Assert(wg.extract(wires));
+    Assert(wg(iwp, wires));
     Assert(wires);
     Assert(wires->size());
     WireCellRootVis::draw2d(app.pad(), *wires);
 
     BoundCells bc;
-    bc.insert(wires);
     ICell::shared_vector cells;
-    bc.extract(cells);
+    Assert(bc(wires, cells));
     Assert(cells);
 
     cerr << "Make " << cells->size() << " cells" << endl;
@@ -242,6 +239,9 @@ int main(int argc, char *argv[])
     Digitizer digitizer;
     digitizer.set_wires(wires);
 
+    ChannelCellSelector ccsel(0.0, 3);
+    ccsel.set_cells(cells);
+
     bool pd_eos[3] = {false};
     while (true) {
 	IPlaneSlice::vector psv(3);
@@ -266,69 +266,31 @@ int main(int argc, char *argv[])
 	    n_cruns += psv[ind]->charge_runs().size();
 	    slice_time = psv[ind]->time(); // for below
 	}
-	Assert(digitizer.insert(IPlaneSlice::shared_vector(new IPlaneSlice::vector(psv))));
-	if (n_eos == 3) {
-	    cerr << "Got EOS from all three plane ductors" << endl;
-	    break;
-	}
 
-	if (n_cruns) {
-	    cerr << "PlaneSlices: \n";
-	    for (int ind=0; ind<3; ++ind) {
-		IPlaneSlice::WireChargeRunVector wcrv = psv[ind]->charge_runs();
-		cerr << "\t" << ind << ":" << psv[ind]->time() << "/" << wcrv.size()
-		     << "[0:" << wcrv[0].first << "/" << wcrv[0].second.size() << "]"
-		     << " queues now: in=" << ductors[ind]->ninput()
-		     << " out=" << ductors[ind]->noutput()
-		     << endl;
-	    }
-	}
 
-	continue;      // allow all planes to run out until all at EOS
-    }
-    Assert(digitizer.insert(nullptr)); // flush with EOS
-
-    
-    ChannelCellSelector ccsel(0.0, 3);
-    ccsel.set_cells(cells);
-
-    int nccs = 0;
-    while (true) {
 	IChannelSlice::pointer csp;
-	Assert(digitizer.extract(csp));
-	if (!csp) {
-	    cerr << "Digitizer reaches EOS" << endl;
-	    break;
-	}
-	ChannelCharge cc = csp->charge();
-	int ncharges = cc.size();
-	if (ncharges) {
-	    cout << "vvv CUT vvv" << endl;
-	    cout << "    double cstime" << nccs << " = " << csp->time() << ";" << endl;
-	    cout << "    ChannelCharge cc" << nccs << ";" << endl;
-	    for (auto cq: cc) {
-	    	cout << "    cc"<<nccs<<"["<< cq.first << "] = "
-	    	     << "Quantity(" << cq.second.mean() << "," << cq.second.sigma() << ");" << endl;
-	    }
-	    cout << "^^^ CUT ^^^" << endl;
-	    ++nccs;
-	}
-	Assert(ccsel.insert(csp));
-    }
-    Assert(ccsel.insert(nullptr)); // flush with EOS
-
-    while (true) {
+	bool ok = digitizer(IPlaneSlice::shared_vector(new IPlaneSlice::vector(psv)), csp);
+	Assert(ok);
+			    
 	ICellSlice::pointer cellslice;
-	Assert(ccsel.extract(cellslice));
+	Assert(ccsel(csp, cellslice));
+
 	if (!cellslice) {
-	    cerr << "ChannelCellSelector reaches EOS" << endl;
+	    cerr << "EOS\n";
 	    break;
 	}
+
 	ICell::shared_vector cellsel = cellslice->cells();
 	if (cellsel->size()) {
 	    cerr << "Selected " << cellsel->size() << " cells at t=" << cellslice->time() << endl;
 	}
+
+	continue;      // allow all planes to run out until all at EOS
     }
+
+
+    
+
 
     app.pdf();
     app.run();

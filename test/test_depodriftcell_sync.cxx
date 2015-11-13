@@ -73,10 +73,10 @@ double time_offset(const Ray& pitch)
 }
 
 // prepare a plane ductor
-IPlaneDuctor::pointer make_ductor(const Ray& pitch,
-				  WirePlaneLayer_t layer,
-				  const IWire::shared_vector& wires,
-				  double tick, double t0=0.0)
+PlaneDuctor* make_ductor(const Ray& pitch,
+			 WirePlaneLayer_t layer,
+			 const IWire::shared_vector& wires,
+			 double tick, double t0=0.0)
 {
     WirePlaneId wpid(layer);
     cerr<<"make_ductor(pitch=" << pitch << ",wpid=" << wpid << ")" << endl;
@@ -103,7 +103,7 @@ IPlaneDuctor::pointer make_ductor(const Ray& pitch,
     // cerr << "\tpitch = " << pitch_unit << endl;
     // cerr << "\twire0 dist=" << wire_zero_dist << endl;
 
-    return IPlaneDuctor::pointer(new PlaneDuctor(wpid, nwires, tick, pitch_distance, t0, wire_zero_dist));
+    return new PlaneDuctor(wpid, nwires, tick, pitch_distance, t0, wire_zero_dist);
 }
 
 
@@ -166,10 +166,8 @@ IWireParameters::pointer do_wireparameters()
 IWire::shared_vector do_wires(IWireParameters::pointer iwp)
 {
     WireGenerator wg;
-    Assert(wg.insert(iwp));
-
     IWire::shared_vector wires;
-    Assert(wg.extract(wires));
+    Assert(wg(iwp, wires));
     Assert(wires);
     Assert(!wires->empty());
     return wires;
@@ -178,9 +176,8 @@ IWire::shared_vector do_wires(IWireParameters::pointer iwp)
 ICell::shared_vector do_cells(IWire::shared_vector wires)
 {
     BoundCells bc;
-    Assert(bc.insert(wires));
     ICell::shared_vector cells;
-    Assert(bc.extract(cells));
+    Assert(bc(wires, cells));
     Assert(cells);
     Assert(!cells->empty());
     return cells;
@@ -242,7 +239,7 @@ IPlaneSlice::shared_vector do_ductor(const IDiffusion::vector& diffused,
 				     const Ray& pitch,
 				     WirePlaneLayer_t layer, double tick, double now)
 {
-    IPlaneDuctor::pointer ductor = make_ductor(pitch, layer, wires, tick, now);
+    auto ductor = make_ductor(pitch, layer, wires, tick, now);
     return do_vector_action(*ductor, diffused);
 }
 
@@ -251,6 +248,8 @@ IChannelSlice::shared_vector do_digitizer(const IWire::shared_vector& wires,
 {
     Digitizer digitizer;
     digitizer.set_wires(wires);
+
+    IChannelSlice::vector* frame = new IChannelSlice::vector;
 
     // repackage and fully load up
     int islice = 0;
@@ -268,18 +267,12 @@ IChannelSlice::shared_vector do_digitizer(const IWire::shared_vector& wires,
 	    break;
 	}
 	
-	Assert(digitizer.insert(IPlaneSlice::shared_vector(psv)));
-    }
-    Assert(digitizer.insert(nullptr));
-
-    IChannelSlice::vector* frame = new IChannelSlice::vector;
-    while (true) {
 	IChannelSlice::pointer csp;
-	Assert(digitizer.extract(csp));
+	Assert(digitizer(IPlaneSlice::shared_vector(psv), csp));
+	frame->push_back(csp);
 	if (!csp) {
 	    break;
 	}
-	frame->push_back(csp);
     }
     return IChannelSlice::shared_vector(frame);
 }
@@ -291,20 +284,14 @@ ICellSlice::shared_vector do_channelcellselector(const ICell::shared_vector& cel
     ChannelCellSelector ccsel(0.0, 3);
     ccsel.set_cells(cells);
 
-    // load up
-    for (auto cs : *frame) {
-	Assert(ccsel.insert(cs));
-    }
-    Assert(ccsel.insert(nullptr));
-
     ICellSlice::vector* cell_slices = new ICellSlice::vector;
-    while (true) {
+    for (auto cs : *frame) {
 	ICellSlice::pointer cellslice;
-	Assert(ccsel.extract(cellslice));
+	Assert(ccsel(cs, cellslice));
+	cell_slices->push_back(cellslice);
 	if (!cellslice) {
 	    break;
 	}
-	cell_slices->push_back(cellslice);
     }
     return ICellSlice::shared_vector(cell_slices);
 }

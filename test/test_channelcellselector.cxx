@@ -35,18 +35,17 @@ int main(int argc, char *argv[])
     WireCellRootVis::draw2d(app.pad(), *iwp);
 
     WireGenerator wg;
-    Assert(wg.insert(iwp));
-
     WireGenerator::output_pointer wires;
-    Assert(wg.extract(wires));
+    bool ok = wg(iwp, wires);
+    Assert(ok);
     Assert(wires);
     Assert(wires->size());
     WireCellRootVis::draw2d(app.pad(), *wires);
 
     BoundCells bc;
-    bc.insert(wires);
     BoundCells::output_pointer cells;
-    bc.extract(cells);
+    ok = bc(wires, cells);
+    Assert(ok);
     Assert(cells);
     Assert(cells->size());
 
@@ -76,10 +75,10 @@ int main(int argc, char *argv[])
     IChannelSlice::pointer csp1(new SimpleChannelSlice(cstime0, cc0));
     ChannelCharge cc = csp1->charge();
     Assert(!cc.empty());
-    Assert(ccsel.insert(csp1));
 
     ChannelCellSelector::output_pointer cellslice;
-    Assert(ccsel.extract(cellslice));
+    ok = ccsel(csp1, cellslice);
+    Assert(ok);
     Assert(cellslice);
     ICell::shared_vector cellsel = cellslice->cells();
     Assert (!cellsel->empty());
