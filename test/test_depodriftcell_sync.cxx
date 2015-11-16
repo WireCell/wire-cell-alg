@@ -131,28 +131,41 @@ void dump(CanvasApp& app, const ICell::vector& cells)
 
 void dump(CanvasApp& app, const IDepo::vector& depos)
 {
-    WireCellRootVis::draw2d(app.clear(), depos);
+    Assert(!depos.back()); 	// last should be EOS
+    WireCellRootVis::draw2d(app.clear(), IDepo::vector(depos.begin(),depos.end()-1));
 }
 
 void dump(CanvasApp& app, const IDiffusion::vector& diffs)
 {
-    WireCellRootVis::draw2d(app.clear(), diffs);
+    Assert(!diffs.back());	// last should be EOS
+    WireCellRootVis::draw2d(app.clear(), IDiffusion::vector(diffs.begin(), diffs.end()-1));
     app.pdf();
 }
 
 void dump(CanvasApp& app, const IPlaneSlice::vector& psv)
 {
+    Assert(psv.size() > 1);
+    Assert(!psv.back());
 }
 void dump(CanvasApp& app, const IChannelSlice::vector& csv)
 {
+    Assert(csv.size() > 1);
+    Assert(!csv.back());
 }
 
 void dump(CanvasApp& app, const ICellSlice::vector& cell_slices)
 {
-    WireCellRootVis::draw3d(app.clear(), cell_slices);
+    Assert(cell_slices.size() > 1);
+    Assert(!cell_slices.back());
+    ICellSlice::vector myslices(cell_slices.begin(), cell_slices.end()-1);
+    WireCellRootVis::draw3d(app.clear(), myslices);
     app.pdf();
-    for (auto cs : cell_slices) {
-	WireCellRootVis::draw2d(app.clear(), *cs->cells());
+    for (auto cs : myslices) {
+	auto mycells = cs->cells();
+	if (!mycells) {
+	    continue;
+	}
+	WireCellRootVis::draw2d(app.clear(), *mycells);
 	app.pdf();
     }
 }
@@ -188,9 +201,10 @@ IDepo::shared_vector do_deposition()
     TrackDepos td = make_tracks();
     IDepo::vector* depos = new IDepo::vector;
     while (true) {
-	auto depo = td();
-	if (!depo) { break; }
+	IDepo::pointer depo;
+	Assert(td.extract(depo));
 	depos->push_back(depo);
+	if (!depo) { break; }
     }
     return IDepo::shared_vector(depos);
 }
@@ -214,10 +228,10 @@ do_vector_action(Action& action, const std::vector<typename Action::input_pointe
     while (true) {
 	typename Action::output_pointer out;
 	Assert(action.extract(out));
+	ret->push_back(out);
 	if (!out) {		// eos
 	    break;
 	}
-	ret->push_back(out);
     }
     return std::shared_ptr<vector_type>(ret);
 }
@@ -243,33 +257,58 @@ IPlaneSlice::shared_vector do_ductor(const IDiffusion::vector& diffused,
     return do_vector_action(*ductor, diffused);
 }
 
+// take in a 3-vector of plane slice vectors, one for each wire plane and each indexed by a slice number.
 IChannelSlice::shared_vector do_digitizer(const IWire::shared_vector& wires,
 					  const std::vector<IPlaneSlice::shared_vector> psvs_byplane)
 {
+    int nslices = psvs_byplane[0]->size();
+    Assert(nslices == psvs_byplane[1]->size());
+    Assert(nslices == psvs_byplane[2]->size());
+
     Digitizer digitizer;
     digitizer.set_wires(wires);
 
     IChannelSlice::vector* frame = new IChannelSlice::vector;
 
-    // repackage and fully load up
-    int islice = 0;
-    while (true) {
+    for (int islice = 0; islice < nslices; ++islice) {
+
+	int n_eos = 3;
+
+	// Get current slice.
 	IPlaneSlice::vector* psv = new IPlaneSlice::vector(3);
-	int n_filled = 0;
+	int nempty = 0;
 	for (int ind=0; ind<3; ++ind) {
-	    if (islice < psvs_byplane[ind]->size()) {
-		(*psv)[ind] = psvs_byplane[ind]->at(islice);
-		++n_filled;
+	    auto plane_slice = psvs_byplane[ind]->at(islice);
+	    (*psv)[ind] = plane_slice;
+	    if (plane_slice) {
+		-- n_eos;
+		if (plane_slice->charge_runs().empty()) {
+		    ++nempty;
+		}
+	    }
+	    else {
+		cerr << "EOS from plane #" << ind << endl;
 	    }
 	}
-	++islice;
-	if (!n_filled) {
-	    break;
+	Assert(n_eos == 0 || n_eos == 3);
+
+	if (nempty) {
+	    cerr << "Slice " << islice << " has " << nempty << " empty planes\n";
 	}
-	
+
 	IChannelSlice::pointer csp;
-	Assert(digitizer(IPlaneSlice::shared_vector(psv), csp));
+	if (n_eos) {
+	    delete psv;
+	    psv = nullptr;
+	    cerr << "Triple EOS from plane slices\n";
+	}
+	IPlaneSlice::shared_vector plane_slice_vector(psv);
+	Assert(digitizer(plane_slice_vector, csp));
 	frame->push_back(csp);
+	if (!plane_slice_vector) {
+	    Assert(!csp);
+	    cerr << "EOS passed through digitizer\n";
+	}
 	if (!csp) {
 	    break;
 	}
@@ -289,10 +328,14 @@ ICellSlice::shared_vector do_channelcellselector(const ICell::shared_vector& cel
 	ICellSlice::pointer cellslice;
 	Assert(ccsel(cs, cellslice));
 	cell_slices->push_back(cellslice);
+	if (!cs) {
+	    Assert(!cellslice);
+	}
 	if (!cellslice) {
 	    break;
 	}
     }
+    Assert(!cell_slices->back());
     return ICellSlice::shared_vector(cell_slices);
 }
 

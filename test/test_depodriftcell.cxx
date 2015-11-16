@@ -46,6 +46,8 @@ TrackDepos make_tracks() {
     //td.add_track(1000*usec, same_point);
     //td.add_track(10000*usec, same_point);
 
+    Assert(td.depos().size() > 1);
+
     return td;
 }
 
@@ -150,16 +152,21 @@ int main(int argc, char *argv[])
     // load up drifters all the way
     IDepo::vector orig_depo;
     while (true) {
-	auto depo = td();
+	IDepo::pointer depo;
+	Assert(td.extract(depo));
 	for (int ind=0; ind<3; ++ind) {
 	    Assert(drifters[ind]->insert(depo));
 	}
 	if (depo) {
+	    cerr << "Deposition: " << depo->time() << " --> " << depo->pos() << endl;
 	    orig_depo.push_back(depo);
 	    continue;
 	}
+	cerr << "No Deposition\n";
 	break;
     }
+    Assert(orig_depo.size() > 0);
+
 
     // diffuse 
 
@@ -227,6 +234,8 @@ int main(int argc, char *argv[])
 	}
     }
 
+    assert(diffusions[0].size() > 0);
+
     app.pdf();
 
     //*** new page ***//
@@ -267,20 +276,42 @@ int main(int argc, char *argv[])
 	    slice_time = psv[ind]->time(); // for below
 	}
 
+	IPlaneSlice::shared_vector plane_slice_vector;
+	if (n_eos == 3) {
+	    cerr << "EOS from all wire planes\n";
+	}
+	else {
+	    plane_slice_vector = IPlaneSlice::shared_vector(new IPlaneSlice::vector(psv));
+	}
 
 	IChannelSlice::pointer csp;
-	bool ok = digitizer(IPlaneSlice::shared_vector(new IPlaneSlice::vector(psv)), csp);
+	bool ok = digitizer(plane_slice_vector, csp);
 	Assert(ok);
+	if (!plane_slice_vector) {
+	    Assert(!csp);
+	}
 			    
 	ICellSlice::pointer cellslice;
 	Assert(ccsel(csp, cellslice));
 
+	if (!csp) {
+	    Assert(!cellslice);
+	    cerr << "ChannelCellSelector: EOS\n";
+	}
+	
+
 	if (!cellslice) {
-	    cerr << "EOS\n";
+	    cerr << "EOS at end of DFP graph\n";
 	    break;
+	    // if this was not last in the chain, then we would forward it
 	}
 
 	ICell::shared_vector cellsel = cellslice->cells();
+	if (!cellsel) {
+	    cerr << "Got empty cell slice\n";
+	    continue;
+	}
+
 	if (cellsel->size()) {
 	    cerr << "Selected " << cellsel->size() << " cells at t=" << cellslice->time() << endl;
 	}
