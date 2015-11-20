@@ -29,13 +29,16 @@ void ChannelCellSelector::set_cells(const ICell::shared_vector& all_cells)
 
 bool ChannelCellSelector::operator()(const input_pointer& in, output_pointer& out)
 {
+    if (m_all_cells->empty()) {
+	return false;
+    }
+
+    ++m_nin;
+    ++m_nout;
+
     if (!in) {
 	out = nullptr;
 	return true;
-    }
-
-    if (m_all_cells->empty()) {
-	return false;
     }
 
     ChannelCharge cc = in->charge(); // fixme: copy?
