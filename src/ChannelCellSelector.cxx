@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <sstream>
 
 using namespace WireCell;
 using namespace std;
@@ -22,6 +23,15 @@ public:
     virtual ICell::shared_vector cells() const { return m_cells; }
 };
 
+ChannelCellSelector::ChannelCellSelector(double charge_threshold,
+					 int minimum_number_of_wires)
+    : m_qmin(charge_threshold)
+    , m_nmin(minimum_number_of_wires)
+    , m_nin(0), m_nout(0)
+    , m_eos(false)
+{
+}
+
 void ChannelCellSelector::set_cells(const ICell::shared_vector& all_cells)
 {
     m_all_cells = all_cells;
@@ -29,15 +39,29 @@ void ChannelCellSelector::set_cells(const ICell::shared_vector& all_cells)
 
 bool ChannelCellSelector::operator()(const input_pointer& in, output_pointer& out)
 {
+    if (m_eos) {
+	cerr << "ChannelCellSelector: EOS\n";
+	return false;
+    }
     if (m_all_cells->empty()) {
 	return false;
     }
 
     ++m_nin;
     ++m_nout;
-
+    {
+	stringstream msg;
+	msg << "ChannelCellSelector: "  << m_nin << " " << m_nout << " " << this << "\n";
+	cerr << msg.str();
+    }
     if (!in) {
 	out = nullptr;
+	m_eos = true;
+	{
+	    stringstream msg;
+	    msg <<"ChannelCellSelector: hit eos: " << m_nin << " " << m_nout << " " << this << "\n";
+	    cerr << msg.str();
+	}
 	return true;
     }
 
