@@ -25,6 +25,8 @@ bool CellSliceSink::insert(const input_pointer& in)
 	return true;
     }
     
+    m_slices.insert(in);
+
     msg << "@ " << in->time() << " with ";
     auto cells = in->cells();
     if (cells) {

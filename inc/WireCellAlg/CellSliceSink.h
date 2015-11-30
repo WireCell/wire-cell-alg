@@ -13,9 +13,12 @@ namespace WireCell {
 
 	virtual int nin() { m_nin; }
 
+	ICellSliceSet& slices() { return m_slices; }
+
     private:
 	
 	int m_nin;
+	ICellSliceSet m_slices;
     };
 }
 
