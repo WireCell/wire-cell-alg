@@ -9,15 +9,12 @@ namespace WireCell {
 	CellSliceSink();
 	virtual ~CellSliceSink();
 
-	virtual bool insert(const input_pointer& in);
-
-	virtual int nin() { m_nin; }
+	virtual bool operator()(const input_pointer& in);
 
 	ICellSliceSet& slices() { return m_slices; }
 
     private:
-	
-	int m_nin;
+
 	ICellSliceSet m_slices;
     };
 }

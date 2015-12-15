@@ -27,7 +27,6 @@ ChannelCellSelector::ChannelCellSelector(double charge_threshold,
 					 int minimum_number_of_wires)
     : m_qmin(charge_threshold)
     , m_nmin(minimum_number_of_wires)
-    , m_count(0)
 {
 }
 
@@ -38,16 +37,15 @@ void ChannelCellSelector::set_cells(const ICell::shared_vector& all_cells)
 
 bool ChannelCellSelector::operator()(const input_pointer& in, output_pointer& out)
 {
-    ++m_count;
     out = nullptr;
     if (m_all_cells->empty()) {
-	cerr << "ChannelCellSelector: " << m_count << " no cells\n";
+	cerr << "ChannelCellSelector: no cells\n";
 	return false;
     }
 
     if (!in) {
 	stringstream msg;
-	msg <<"ChannelCellSelector: " << m_count << " " << "nullptr input\n";
+	msg <<"ChannelCellSelector: nullptr input\n";
 	cerr << msg.str();
 	return true;
     }
@@ -58,7 +56,7 @@ bool ChannelCellSelector::operator()(const input_pointer& in, output_pointer& ou
     if (cc.empty()) {
 	out = output_pointer(new SimpleCellSlice()); // empty
 	stringstream msg;
-	msg << "ChannelCellSelector: "  << m_count << " at t=" << in->time()
+	msg << "ChannelCellSelector: at t=" << in->time()
 	    << " no channel charge\n";
 	cerr << msg.str();
 	return true;
@@ -69,7 +67,7 @@ bool ChannelCellSelector::operator()(const input_pointer& in, output_pointer& ou
     std::copy_if(m_all_cells->begin(), m_all_cells->end(), back_inserter(cells), mhc);
     if (cells.empty()) {
 	stringstream msg;
-	msg << "ChannelCellSelector: "  << m_count << " at t=" << in->time()
+	msg << "ChannelCellSelector: at t=" << in->time()
 	    << " no hit cells with " << cc.size() << " hit channels\n";
 	cerr << msg.str();
 
@@ -81,7 +79,7 @@ bool ChannelCellSelector::operator()(const input_pointer& in, output_pointer& ou
 
     {
 	stringstream msg;
-	msg << "ChannelCellSelector: "  << m_count << " at t=" << in->time()
+	msg << "ChannelCellSelector: at t=" << in->time()
 	    << " cell slice with " << out->cells()->size() << "\n";
 	cerr << msg.str();
     }

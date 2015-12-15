@@ -22,15 +22,11 @@ namespace WireCell {
 
 	virtual bool operator()(const input_pointer& in, output_pointer& out);
 
-	virtual int nin() { return m_count; }
-	virtual int nout() { return m_count; }
-
     private:
 
 	const double m_qmin;
 	const int m_nmin;
 	ICell::shared_vector m_all_cells;
-	int m_count;
     };
 }
 
