@@ -6,13 +6,17 @@
 #include <iostream>
 #include <sstream>
 
+WIRECELL_FACTORY(ChannelCellSelector, WireCell::ChannelCellSelector,
+		 WireCell::IChannelCellSelector, WireCell::IConfigurable);
+
 using namespace WireCell;
 using namespace std;
 
-WIRECELL_NAMEDFACTORY_BEGIN(ChannelCellSelector)
-WIRECELL_NAMEDFACTORY_INTERFACE(ChannelCellSelector, IChannelCellSelector);
-WIRECELL_NAMEDFACTORY_INTERFACE(ChannelCellSelector, IConfigurable);
-WIRECELL_NAMEDFACTORY_END(ChannelCellSelector)
+// WIRECELL_NAMEDFACTORY_BEGIN(ChannelCellSelector)
+// WIRECELL_NAMEDFACTORY_INTERFACE(ChannelCellSelector, IChannelCellSelector);
+// WIRECELL_NAMEDFACTORY_INTERFACE(ChannelCellSelector, IConfigurable);
+// WIRECELL_NAMEDFACTORY_END(ChannelCellSelector)
+
 
 // fixme: move into iface/Simple
 class SimpleCellSlice : public ICellSlice {
