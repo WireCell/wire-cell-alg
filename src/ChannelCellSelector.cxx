@@ -41,7 +41,7 @@ Configuration ChannelCellSelector::default_configuration() const
     std::string json = R"(
 {
 "charge_threshold":0.0,
-"min_wire_coinc":3,
+"min_wire_coinc":3
 }
 )";
     return configuration_loads(json, "json");
