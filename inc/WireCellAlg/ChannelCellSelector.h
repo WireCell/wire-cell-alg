@@ -2,6 +2,7 @@
 #define WIRECELLIFACE_CHANNELCELLSELECTOR
 
 #include "WireCellIface/IChannelCellSelector.h"
+#include "WireCellIface/IConfigurable.h"
 
 #include <deque>
 
@@ -11,7 +12,7 @@ namespace WireCell {
      *
      * See that class for details.
      */
-    class ChannelCellSelector : public IChannelCellSelector
+    class ChannelCellSelector : public IChannelCellSelector, public IConfigurable
     {
     public:
 	ChannelCellSelector(double charge_threshold = 0.0,
@@ -22,10 +23,13 @@ namespace WireCell {
 
 	virtual bool operator()(const input_pointer& in, output_pointer& out);
 
+	virtual void configure(const WireCell::Configuration& config);
+	virtual WireCell::Configuration default_configuration() const;
+
     private:
 
-	const double m_qmin;
-	const int m_nmin;
+	double m_qmin;
+	int m_nmin;
 	ICell::shared_vector m_all_cells;
     };
 }

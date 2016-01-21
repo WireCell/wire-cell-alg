@@ -1,5 +1,6 @@
 #include "WireCellAlg/ChannelCellSelector.h"
 #include "WireCellAlg/Predicates.h"
+#include "WireCellUtil/NamedFactory.h"
 
 #include <algorithm>
 #include <iostream>
@@ -7,6 +8,11 @@
 
 using namespace WireCell;
 using namespace std;
+
+WIRECELL_NAMEDFACTORY_BEGIN(ChannelCellSelector)
+WIRECELL_NAMEDFACTORY_INTERFACE(ChannelCellSelector, IChannelCellSelector);
+WIRECELL_NAMEDFACTORY_INTERFACE(ChannelCellSelector, IConfigurable);
+WIRECELL_NAMEDFACTORY_END(ChannelCellSelector)
 
 // fixme: move into iface/Simple
 class SimpleCellSlice : public ICellSlice {
@@ -28,6 +34,23 @@ ChannelCellSelector::ChannelCellSelector(double charge_threshold,
     : m_qmin(charge_threshold)
     , m_nmin(minimum_number_of_wires)
 {
+}
+
+Configuration ChannelCellSelector::default_configuration() const
+{
+    std::string json = R"(
+{
+"charge_threshold":0.0,
+"min_wire_coinc":3,
+}
+)";
+    return configuration_loads(json, "json");
+}
+
+void ChannelCellSelector::configure(const Configuration& cfg)
+{
+    m_qmin = get<double>(cfg, "charge_threshold", m_qmin);
+    m_nmin = get<int>(cfg, "min_wire_coinc", m_nmin);
 }
 
 void ChannelCellSelector::set_cells(const ICell::shared_vector& all_cells)
