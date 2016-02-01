@@ -1,7 +1,11 @@
 #include "WireCellAlg/CellSliceSink.h"
+#include "WireCellUtil/NamedFactory.h"
+
 
 #include <iostream>
 #include <sstream>
+
+WIRECELL_FACTORY(CellSliceSink, WireCell::CellSliceSink, WireCell::ICellSliceSink);
 
 using namespace std;
 
