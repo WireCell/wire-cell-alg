@@ -54,8 +54,6 @@ int main(int argc, char *argv[])
     WireCellRootVis::draw2d(app.pad(), *cells);
 
     ChannelCellSelector ccsel(0.0, 3);
-    ccsel.set_cells(cells);
-
     
     // get this numbers by running test_depodriftcell
     double cstime0 = 16000;
@@ -77,7 +75,7 @@ int main(int argc, char *argv[])
     Assert(!cc.empty());
 
     ChannelCellSelector::output_pointer cellslice;
-    ok = ccsel(csp1, cellslice);
+    ok = ccsel(make_tuple(csp1, cells), cellslice);
     Assert(ok);
     Assert(cellslice);
     ICell::shared_vector cellsel = cellslice->cells();

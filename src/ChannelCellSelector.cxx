@@ -12,11 +12,6 @@ WIRECELL_FACTORY(ChannelCellSelector, WireCell::ChannelCellSelector,
 using namespace WireCell;
 using namespace std;
 
-// WIRECELL_NAMEDFACTORY_BEGIN(ChannelCellSelector)
-// WIRECELL_NAMEDFACTORY_INTERFACE(ChannelCellSelector, IChannelCellSelector);
-// WIRECELL_NAMEDFACTORY_INTERFACE(ChannelCellSelector, IConfigurable);
-// WIRECELL_NAMEDFACTORY_END(ChannelCellSelector)
-
 
 // fixme: move into iface/Simple
 class SimpleCellSlice : public ICellSlice {
@@ -57,33 +52,26 @@ void ChannelCellSelector::configure(const Configuration& cfg)
     m_nmin = get<int>(cfg, "min_wire_coinc", m_nmin);
 }
 
-void ChannelCellSelector::set_cells(const ICell::shared_vector& all_cells)
-{
-    m_all_cells = all_cells;
-}
-
-bool ChannelCellSelector::operator()(const input_pointer& in, output_pointer& out)
+bool ChannelCellSelector::operator()(const input_tuple_type& intup, output_pointer& out)
 {
     out = nullptr;
-    if (m_all_cells->empty()) {
-	cerr << "ChannelCellSelector: no cells\n";
-	return false;
-    }
 
-    if (!in) {
+    IChannelSlice::pointer cslice = get<0>(intup);
+    ICell::shared_vector all_cells = get<1>(intup);
+
+    if (!cslice || !all_cells) {
 	stringstream msg;
-	msg <<"ChannelCellSelector: nullptr input\n";
+	msg <<"ChannelCellSelector: EOS\n";
 	cerr << msg.str();
 	return true;
     }
 
 
-
-    ChannelCharge cc = in->charge(); // fixme: copy?
+    ChannelCharge cc = cslice->charge(); // fixme: copy?
     if (cc.empty()) {
 	out = output_pointer(new SimpleCellSlice()); // empty
 	stringstream msg;
-	msg << "ChannelCellSelector: at t=" << in->time()
+	msg << "ChannelCellSelector: at t=" << cslice->time()
 	    << " no channel charge\n";
 	cerr << msg.str();
 	return true;
@@ -91,10 +79,10 @@ bool ChannelCellSelector::operator()(const input_pointer& in, output_pointer& ou
 
     MaybeHitCell mhc(cc, m_qmin, m_nmin);
     ICell::vector cells;
-    std::copy_if(m_all_cells->begin(), m_all_cells->end(), back_inserter(cells), mhc);
+    std::copy_if(all_cells->begin(), all_cells->end(), back_inserter(cells), mhc);
     if (cells.empty()) {
 	stringstream msg;
-	msg << "ChannelCellSelector: at t=" << in->time()
+	msg << "ChannelCellSelector: at t=" << cslice->time()
 	    << " no hit cells with " << cc.size() << " hit channels\n";
 	cerr << msg.str();
 
@@ -102,11 +90,11 @@ bool ChannelCellSelector::operator()(const input_pointer& in, output_pointer& ou
 	return true;
     }
 
-    out = output_pointer(new SimpleCellSlice(in->time(), cells));
+    out = output_pointer(new SimpleCellSlice(cslice->time(), cells));
 
     {
 	stringstream msg;
-	msg << "ChannelCellSelector: at t=" << in->time()
+	msg << "ChannelCellSelector: at t=" << cslice->time()
 	    << " cell slice with " << out->cells()->size() << "\n";
 	cerr << msg.str();
     }

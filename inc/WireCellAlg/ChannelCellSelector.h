@@ -19,9 +19,7 @@ namespace WireCell {
 			    int minimum_number_of_wires = 3);
 	virtual ~ChannelCellSelector() {}
 
-	virtual void set_cells(const ICell::shared_vector& all_cells);
-
-	virtual bool operator()(const input_pointer& in, output_pointer& out);
+	virtual bool operator()(const input_tuple_type& intup, output_pointer& out);
 
 	virtual void configure(const WireCell::Configuration& config);
 	virtual WireCell::Configuration default_configuration() const;
@@ -30,7 +28,6 @@ namespace WireCell {
 
 	double m_qmin;
 	int m_nmin;
-	ICell::shared_vector m_all_cells;
     };
 }
 
