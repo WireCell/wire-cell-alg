@@ -37,13 +37,10 @@ ChannelCellSelector::ChannelCellSelector(double charge_threshold,
 
 Configuration ChannelCellSelector::default_configuration() const
 {
-    std::string json = R"(
-{
-"charge_threshold":0.0,
-"min_wire_coinc":3
-}
-)";
-    return configuration_loads(json, "json");
+    Configuration cfg;
+    cfg["charge_threshold"] = 0.0;
+    cfg["min_wire_coinc"] = 3;
+    return cfg;
 }
 
 void ChannelCellSelector::configure(const Configuration& cfg)
