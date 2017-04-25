@@ -25,9 +25,9 @@ int main(int argc, char *argv[])
     WireCellRootVis::CanvasApp app(argv[0], argc>1, 1000,1000);
     app.divide(2,2);
 
-    const double tick = 2.0*units::microsecond; 
-    const int nticks_per_frame = 100;
-    double now = 0.0*units::microsecond;
+    //const double tick = 2.0*units::microsecond; 
+    //const int nticks_per_frame = 100;
+    //double now = 0.0*units::microsecond;
 
     IWireParameters::pointer iwp(new WireParams);
 

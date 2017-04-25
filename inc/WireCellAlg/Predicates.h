@@ -22,8 +22,8 @@ namespace WireCell {
      */
     struct MaybeHitCell {
 	const WireCell::ChannelCharge& cc;
-	const int nmin;
 	const double qmin;
+	const int nmin;
 
 	MaybeHitCell(const WireCell::ChannelCharge& cc,
 		     double charge_threshold=0.0,
